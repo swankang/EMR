@@ -10,14 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logout-btn');
     const userEmailSpan = document.getElementById('user-email');
 
+    let appInitialized = false; // 앱이 초기화되었는지 확인하는 플래그
+
     // --- 핵심! 인증 상태 감지 로직 ---
     auth.onAuthStateChanged(user => {
-        if (user) {
+        if (user && !appInitialized) {
+            // 사용자가 로그인했고, 앱이 아직 초기화되지 않았다면 실행
+            appInitialized = true; // 초기화 플래그를 true로 설정
             authView.classList.add('hidden');
             appContainer.classList.remove('hidden');
             userEmailSpan.textContent = user.email;
             initializeApp(user); 
-        } else {
+        } else if (!user) {
+            // 사용자가 로그아웃한 경우
+            appInitialized = false; // 로그아웃 시 플래그 리셋
             authView.classList.remove('hidden');
             appContainer.classList.add('hidden');
             userEmailSpan.textContent = '';
@@ -181,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!doc.exists) return;
             const clinic = { id: doc.id, ...doc.data() };
             currentClinicId = id;
+            const updatedAtText = (clinic.updatedAt && clinic.updatedAt.toDate) ? new Date(clinic.updatedAt.toDate()).toLocaleString() : '방금 전';
             document.getElementById('detail-clinic-name').textContent = clinic.name;
             document.getElementById('detail-address').textContent = clinic.address;
             document.getElementById('detail-manager').textContent = clinic.manager || '-';
@@ -189,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('detail-department').textContent = clinic.department || '-';
             document.getElementById('detail-scale').textContent = clinic.scale || '-';
             document.getElementById('detail-notes').textContent = clinic.notes || '-';
-            document.getElementById('detail-updated').textContent = new Date(clinic.updatedAt.toDate()).toLocaleString();
+            document.getElementById('detail-updated').textContent = updatedAtText;
             document.getElementById('memo-history').value = clinic.memo || '';
             listView.classList.add('hidden');
             detailView.classList.remove('hidden');
@@ -214,7 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function execDaumPostcode() { new daum.Postcode({ oncomplete: function(data) { let addr = data.userSelectedType === 'R' ? data.roadAddress : data.jibunAddress; document.getElementById('clinic-address').value = addr; document.getElementById("clinic-address-detail").focus(); } }).open(); }
         
-        // --- 이벤트 핸들러 ---
         addClinicBtn.addEventListener('click', () => { clinicForm.reset(); modalTitle.textContent = '의원 정보 입력'; document.getElementById('clinic-id').value = ''; modal.classList.remove('hidden'); });
         editClinicBtn.addEventListener('click', async () => { if (!currentClinicId) return; const doc = await clinicsCollection.doc(currentClinicId).get(); if (doc.exists) { const clinicToEdit = { id: doc.id, ...doc.data() }; modalTitle.textContent = '의원 정보 수정'; document.getElementById('clinic-id').value = clinicToEdit.id; document.getElementById('clinic-name').value = clinicToEdit.name; const addressParts = clinicToEdit.address.split(','); document.getElementById('clinic-address').value = addressParts[0].trim(); document.getElementById('clinic-address-detail').value = addressParts.length > 1 ? addressParts.slice(1).join(',').trim() : ''; document.getElementById('clinic-manager').value = clinicToEdit.manager; document.getElementById('clinic-contact').value = clinicToEdit.contact; document.getElementById('clinic-department').value = clinicToEdit.department; document.getElementById('clinic-scale').value = clinicToEdit.scale; document.getElementById('clinic-notes').value = clinicToEdit.notes; document.getElementById('clinic-stage').value = clinicToEdit.stage; modal.classList.remove('hidden'); } });
         closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
