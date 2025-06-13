@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>부산의원 관리 v3</title>
-    <link rel="stylesheet" href="style.css?v=final_check">
+    <link rel="stylesheet" href="style.css?v=final_check_2">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -24,8 +24,42 @@
             </form>
         </div>
     </div>
+
     <div class="container hidden" id="app-container">
+        <div id="list-view">
+            <header>
+                <h1>현황 대시보드 <span id="total-clinic-count"></span></h1>
+                <div>
+                    <span id="user-email" class="user-email"></span>
+                    <button id="add-clinic-btn">의원 추가</button>
+                    <button id="logout-btn" class="danger">로그아웃</button>
+                </div>
+            </header>
+            <section id="stats-section">
+                <div class="stat-card"><h3>진료과별 분포</h3><canvas id="department-chart"></canvas></div>
+                <div class="stat-card"><h3>규모별 분포</h3><canvas id="scale-chart"></canvas></div>
+                <div class="stat-card"><h3>영업 단계별 현황</h3><canvas id="stage-chart"></canvas></div>
+            </section>
+            <main id="dashboard-view"></main>
+            <section id="todo-section">
+                <header class="todo-header">
+                    <h2>TO DO LIST <span id="total-todo-count"></span></h2>
+                    <div>
+                        <div id="todo-filter-buttons">
+                            <button class="filter-btn active" data-filter="all">전체</button>
+                            <button class="filter-btn" data-filter="incomplete">미완료</button>
+                            <button class="filter-btn" data-filter="complete">완료</button>
+                        </div>
+                        <button id="add-todo-btn">일정 등록</button>
+                    </div>
+                </header>
+                <div id="todo-list"></div>
+            </section>
         </div>
+        <div id="detail-view" class="hidden"></div>
+        <div id="clinic-modal" class="modal hidden"></div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
