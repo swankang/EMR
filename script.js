@@ -14,39 +14,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 핵심! 인증 상태 감지 로직 ---
     auth.onAuthStateChanged(user => {
-        if (user && !appInitialized) {
+        if (user) {
             // 사용자가 로그인했고, 앱이 아직 초기화되지 않았다면 실행
-            appInitialized = true; // 초기화 플래그를 true로 설정
+            if (!appInitialized) {
+                appInitialized = true; // 초기화 플래그를 true로 설정
+                initializeApp(user); 
+            }
             authView.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            userEmailSpan.textContent = user.email;
-            initializeApp(user); 
-        } else if (!user) {
+            if(userEmailSpan) userEmailSpan.textContent = user.email;
+        } else {
             // 사용자가 로그아웃한 경우
             appInitialized = false; // 로그아웃 시 플래그 리셋
             authView.classList.remove('hidden');
             appContainer.classList.add('hidden');
-            userEmailSpan.textContent = '';
+            if(userEmailSpan) userEmailSpan.textContent = '';
         }
     });
 
     // --- 인증 관련 이벤트 핸들러 ---
-    loginBtn.addEventListener('click', () => {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        if (!email || !password) {
-            alert('이메일과 비밀번호를 모두 입력해주세요.');
-            return;
-        }
-        auth.signInWithEmailAndPassword(email, password)
-            .catch(error => {
-                alert(`로그인 실패: ${error.message}`);
-            });
-    });
+    if(loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if (!email || !password) {
+                alert('이메일과 비밀번호를 모두 입력해주세요.');
+                return;
+            }
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => alert(`로그인 실패: ${error.message}`));
+        });
+    }
 
-    logoutBtn.addEventListener('click', () => {
-        auth.signOut();
-    });
+    if(logoutBtn) {
+        logoutBtn.addEventListener('click', () => auth.signOut());
+    }
 
     // ================================================================
     //   ▼▼▼ 로그인 후 앱의 모든 기능은 이 함수 안에서 동작 ▼▼▼
@@ -76,15 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const todoListContainer = document.getElementById('todo-list');
         const filterButtons = document.getElementById('todo-filter-buttons');
         
-        // 차트 객체 변수
-        let departmentChart = null;
-        let scaleChart = null;
-        let stageChart = null;
-
+        let departmentChart = null, scaleChart = null, stageChart = null;
         let currentClinicId = null;
         let currentTodoFilter = 'all';
 
-        // --- 데이터 관리 함수 (Firestore 버전) ---
         async function getClinics() {
             const snapshot = await clinicsCollection.orderBy('updatedAt', 'desc').get();
             const clinics = [];
@@ -98,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return todos;
         }
 
-        // --- 화면 렌더링 함수 ---
         async function renderStatistics() {
             const clinics = await getClinics();
             const departmentData = clinics.reduce((acc, clinic) => { const dept = clinic.department || "미지정"; acc[dept] = (acc[dept] || 0) + 1; return acc; }, {});
@@ -110,11 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
             clinics.forEach(clinic => { const index = stageOrder.indexOf(clinic.stage); if (index > -1) { stageData.values[index]++; } });
 
             if (departmentChart) departmentChart.destroy();
-            departmentChart = new Chart(document.getElementById('department-chart'), { type: 'doughnut', data: { labels: Object.keys(departmentData), datasets: [{ data: Object.values(departmentData), backgroundColor: ['#cce5ff', '#b3d7ff', '#99c9ff', '#80bbff', '#66adff', '#4da0ff', '#3392ff'] }] }, options: { responsive: true } });
+            departmentChart = new Chart(document.getElementById('department-chart'), { type: 'doughnut', data: { labels: Object.keys(departmentData), datasets: [{ data: Object.values(departmentData), backgroundColor: ['#cce5ff', '#b3d7ff', '#99c9ff', '#80bbff', '#66adff', '#4da0ff', '#3392ff'], hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
             if (scaleChart) scaleChart.destroy();
-            scaleChart = new Chart(document.getElementById('scale-chart'), { type: 'bar', data: { labels: scaleData.labels, datasets: [{ label: '의원 수', data: scaleData.values, backgroundColor: '#a9c9ff' }] }, options: { responsive: true } });
+            scaleChart = new Chart(document.getElementById('scale-chart'), { type: 'bar', data: { labels: scaleData.labels, datasets: [{ label: '의원 수', data: scaleData.values, backgroundColor: '#a9c9ff' }] }, options: { responsive: true, maintainAspectRatio: false } });
             if (stageChart) stageChart.destroy();
-            stageChart = new Chart(document.getElementById('stage-chart'), { type: 'bar', data: { labels: stageData.labels, datasets: [{ label: '의원 수', data: stageData.values, backgroundColor: ['#f8f9fa', '#eaf2ff', '#dce9ff', '#cad8ff'], borderColor: '#ccc', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true } });
+            stageChart = new Chart(document.getElementById('stage-chart'), { type: 'bar', data: { labels: stageData.labels, datasets: [{ label: '의원 수', data: stageData.values, backgroundColor: ['#f8f9fa', '#eaf2ff', '#dce9ff', '#cad8ff'], borderColor: '#ccc', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false } });
         }
 
         async function renderClinicList() {
