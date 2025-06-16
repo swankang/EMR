@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const stageOrder = ['인지', '관심', '고려', '구매'];
             const stageData = { labels: stageOrder, values: Array(stageOrder.length).fill(0) };
             clinics.forEach(clinic => { const index = stageOrder.indexOf(clinic.stage); if (index > -1) stageData.values[index]++; });
-            new Chart(document.getElementById('stage-chart'), { type: 'bar', data: { labels: stageData.labels, datasets: [{ label: '의원 수', data: stageData.values, backgroundColor: ['#f2f9ff', '#dbe9ff', '#c4daff', '#baccff'], borderColor: '#ccc', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true } });
+            new Chart(document.getElementById('stage-chart'), { type: 'bar', data: { labels: stageData.labels, datasets: [{ label: '의원 수', data: stageData.values, backgroundColor: ['#f2f9ff', '#dbe9ff', '#c4daff', '#baccff'], borderColor: '#ccc', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, scales : {y : {beginAtZero : true, ticks : {stepSize : 1}}} } });
         }
 
         async function updateDashboard() {
