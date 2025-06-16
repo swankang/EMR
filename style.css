@@ -124,10 +124,10 @@ button.danger:hover { background-color: #c82333; }
 /* 대시보드 스타일 */
 #dashboard-view { display: flex; gap: 20px; align-items: flex-start; }
 .stage-column { flex: 1; border-radius: 8px; padding: 15px; transition: background-color 0.3s; }
-.stage-awareness { background-color: #f8f9fa; } 
-.stage-interest { background-color: #eaf2ff; }
-.stage-consideration { background-color: #dce9ff; }
-.stage-purchase { background-color: #cad8ff; }
+.stage-awareness { background-color: #f2f9ff; } 
+.stage-interest { background-color: #dbe9ff; }
+.stage-consideration { background-color: #c4daff; }
+.stage-purchase { background-color: #baccff; }
 .stage-column h2 { margin: 0 0 15px; padding-bottom: 10px; border-bottom: 2px solid #dee2e6; font-size: 20px; display: flex; justify-content: space-between; align-items: center; }
 .stage-column h2 .count { font-size: 14px; background-color: var(--primary-color); color: white; padding: 4px 10px; border-radius: 12px; }
 .clinic-cards-container { display: flex; flex-direction: column; gap: 15px; min-height: 100px; }
