@@ -38,7 +38,7 @@
             <section id="stats-section">
                 <div class="stat-card"><h3>진료과별 분포</h3><div class="chart-container"><canvas id="department-chart"></canvas></div></div>
                 <div class="stat-card"><h3>규모별 분포</h3><div class="chart-container"><canvas id="scale-chart"></canvas></div></div>
-                <div class="stat-card"><h3>홍보 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
+                <div class="stat-card"><h3>영업 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
             </section>
             <main id="dashboard-view"></main>
             <section id="todo-section">
@@ -133,6 +133,13 @@
                     </select>
                     <button type="submit">저장</button>
                 </form>
+            </div>
+        </div>
+
+        <div id="postcode-modal" class="modal hidden">
+            <div class="postcode-modal-content">
+                <span id="postcode-close-btn" class="close-btn">&times;</span>
+                <div id="postcode-embed"></div>
             </div>
         </div>
     </div>
