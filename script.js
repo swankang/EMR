@@ -96,12 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const scaleOrder = ['0~5명', '6~10명', '11~15명', '16~20명', '21명 이상'];
             const scaleData = { labels: scaleOrder, values: Array(scaleOrder.length).fill(0) };
             clinics.forEach(clinic => { const index = scaleOrder.indexOf(clinic.scale); if (index > -1) scaleData.values[index]++; });
-            new Chart(document.getElementById('scale-chart'), { type: 'bar', data: { labels: scaleData.labels, datasets: [{ label: '의원 수', data: scaleData.values, backgroundColor: '#a9c9ff' }] }, options: { responsive: true, maintainAspectRatio: true } });
+            new Chart(document.getElementById('scale-chart'), { type: 'bar', data: { labels: scaleData.labels, datasets: [{ label: '의원 수', data: scaleData.values, backgroundColor: '#a9c9ff' }] }, options: { responsive: true, maintainAspectRatio: true, scales : {y : { beginAtZero: true, ticks: { stepSize : 1}}} } });
             
             const stageOrder = ['인지', '관심', '고려', '구매'];
             const stageData = { labels: stageOrder, values: Array(stageOrder.length).fill(0) };
             clinics.forEach(clinic => { const index = stageOrder.indexOf(clinic.stage); if (index > -1) stageData.values[index]++; });
-            new Chart(document.getElementById('stage-chart'), { type: 'bar', data: { labels: stageData.labels, datasets: [{ label: '의원 수', data: stageData.values, backgroundColor: ['#f8f9fa', '#eaf2ff', '#dce9ff', '#cad8ff'], borderColor: '#ccc', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true } });
+            new Chart(document.getElementById('stage-chart'), { type: 'bar', data: { labels: stageData.labels, datasets: [{ label: '의원 수', data: stageData.values, backgroundColor: ['#f2f9ff', '#dbe9ff', '#c4daff', '#baccff'], borderColor: '#ccc', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true } });
         }
 
         async function updateDashboard() {
