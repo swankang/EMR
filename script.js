@@ -70,9 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let currentClinicId = null;
         let currentTodoFilter = 'all';
+        let currentTodoPage = 1; // 현재 페이지 번호 (1부터 시작)
+        const TODO_PAGE_SIZE = 10; // 한 페이지에 보여줄 항목 수
 
         if (userEmailSpan) userEmailSpan.textContent = user.email;
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+        
+
 
         function loadNaverMapsApi() {
             return new Promise((resolve, reject) => {
@@ -269,28 +273,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         async function renderTodoList() {
-            todoListContainer.innerHTML = '';
+            todoListContainer.innerHTML = ''; // 기존 목록 비우기
             const allTodos = (await todosCollection.orderBy('createdAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+            // 1. 필터링 (기존과 동일)
             const filteredTodos = allTodos.filter(todo => {
                 if (currentTodoFilter === 'all') return true;
                 if (currentTodoFilter === 'complete') return todo.isComplete;
-                if (currentTodoFilter === 'incomplete') return !todo.isComplete;
+                return !todo.isComplete;
             });
 
             totalTodoCountSpan.textContent = `(총 ${filteredTodos.length}개)`;
             
-            if (filteredTodos.length === 0) {
-                todoListContainer.innerHTML = '<p style="text-align:center; color:#888; padding: 20px 0;">등록된 일정이 없습니다.</p>';
+            // 2. 현재 페이지에 해당하는 데이터만 자르기 (⭐ 신규 추가)
+            const totalPages = Math.ceil(filteredTodos.length / TODO_PAGE_SIZE);
+            const startIndex = (currentTodoPage - 1) * TODO_PAGE_SIZE;
+            const endIndex = startIndex + TODO_PAGE_SIZE;
+            const todosForCurrentPage = filteredTodos.slice(startIndex, endIndex);
+
+            // 3. 화면에 그리기 (잘라낸 데이터로)
+            if (todosForCurrentPage.length === 0) {
+                todoListContainer.innerHTML = '<p style="text-align:center; color:#888; padding: 20px 0;">표시할 일정이 없습니다.</p>';
             } else {
-                 const today = new Date(); today.setHours(0, 0, 0, 0);
-                 filteredTodos.forEach(todo => {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                todosForCurrentPage.forEach(todo => {
                     const todoItem = document.createElement('div');
                     todoItem.className = `todo-item ${todo.isComplete ? 'completed' : ''}`;
                     todoItem.dataset.id = todo.id;
-                    const dueDate = new Date(todo.dueDate); 
+                    const dueDate = new Date(todo.dueDate);
                     const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-                    let dDayText = `D-${diffDays}`; 
+                    let dDayText = `D-${diffDays}`;
                     let dDayClass = '';
                     if (diffDays < 0) { dDayText = `D+${Math.abs(diffDays)}`; dDayClass = 'overdue'; }
                     else if (diffDays === 0) { dDayText = 'D-Day'; }
@@ -299,7 +311,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     todoListContainer.appendChild(todoItem);
                 });
             }
+            
+            // 4. 페이지네이션 버튼 그리기 (⭐ 신규 추가)
+            renderTodoPagination(totalPages);
         }
+
+        function renderTodoPagination(totalPages) {
+            const paginationContainer = document.getElementById('todo-pagination');
+            paginationContainer.innerHTML = ''; // 기존 버튼 비우기
+
+            // 총 페이지가 1 이하면 페이지네이션 표시 안 함
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = 'pagination-btn';
+                pageBtn.textContent = i;
+
+                if (i === currentTodoPage) {
+                    pageBtn.classList.add('active');
+                }
+
+                pageBtn.addEventListener('click', () => {
+                    currentTodoPage = i; // 페이지 번호 변경
+                    renderTodoList(); // 목록 다시 그리기
+                });
+
+                paginationContainer.appendChild(pageBtn);
+            }
+        }
+
+
+
+
 
         async function showDetailView(id) {
             const doc = await clinicsCollection.doc(id).get();
@@ -436,6 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filterButtons.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 currentTodoFilter = e.target.dataset.filter;
+                currentTodoPage = 1; // ⭐ 필터 변경 시 1페이지로 리셋
                 document.querySelectorAll('#todo-filter-buttons .filter-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 renderTodoList();
