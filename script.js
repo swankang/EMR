@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentClinicId = null;
         let currentTodoFilter = 'all';
         let currentTodoPage = 1; // 현재 페이지 번호 (1부터 시작)
-        const TODO_PAGE_SIZE = 10; // 한 페이지에 보여줄 항목 수
+        const TODO_PAGE_SIZE = 5; // 한 페이지에 보여줄 항목 수
 
         if (userEmailSpan) userEmailSpan.textContent = user.email;
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
