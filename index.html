@@ -46,7 +46,8 @@
                     <h2>TO DO LIST <span id="total-todo-count"></span></h2>
                     <div>
                         <div id="todo-filter-buttons">
-                            <button class="filter-btn active" data-filter="all">전체</button>
+                            <button class="filter-btn active" data-filter="all">전체</button>delete-clinic-btn
+
                             <button class="filter-btn" data-filter="incomplete">미완료</button>
                             <button class="filter-btn" data-filter="complete">완료</button>
                         </div>
@@ -63,6 +64,7 @@
                 <button id="back-to-list-btn">← 목록으로</button>
                 <h1 id="detail-clinic-name"></h1>
                 <button id="edit-clinic-btn">정보 수정</button>
+                <button id="delete-clinic-btn" class="danger">의원 삭제</button>
             </header>
             <main>
                 <div class="detail-content">
@@ -86,9 +88,6 @@
                     <h2>메모 이력</h2>
                     <textarea id="memo-history" rows="10" placeholder="상담 내용, 특이사항 등을 기록하세요..."></textarea>
                     <button id="save-memo-btn">메모 저장</button>
-                </div>
-                <div class="actions">
-                    <button id="delete-clinic-btn" class="danger">이 의원 삭제</button>
                 </div>
             </main>
         </div>
