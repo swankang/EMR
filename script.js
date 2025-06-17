@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     container.appendChild(card);
                 }
             });
-            // await renderStatistics(clinics); // You can uncomment this if you have the full function
+            await renderStatistics(clinics); // You can uncomment this if you have the full function
         }
 
         function setupDashboard() {
