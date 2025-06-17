@@ -23,13 +23,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    if (loginBtn) {
+       if (loginBtn) {
         loginBtn.addEventListener('click', () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             if (!email || !password) return alert('이메일과 비밀번호를 모두 입력해주세요.');
-            auth.signInWithEmailAndPassword(email, password)
-                .catch(error => alert(`로그인 실패: ${error.message}`));
+
+            // --- 여기가 핵심! ---
+            // 로그인 방식을 '세션(SESSION)'으로 설정합니다.
+            auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+                .then(() => {
+                    // 세션 설정이 성공하면, 로그인을 시도합니다.
+                    return auth.signInWithEmailAndPassword(email, password);
+                })
+                .catch(error => {
+                    // 세션 설정 또는 로그인 과정에서 오류가 발생한 경우
+                    alert(`로그인 처리 중 오류 발생: ${error.message}`);
+                });
         });
     }
     
