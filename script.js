@@ -106,7 +106,103 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 100);
         }
         
-        async function renderStatistics(clinics) { /* ... This function is complete and correct ... */ }
+        async function renderStatistics(clinics) {
+            const departmentCanvas = document.getElementById('department-chart');
+            const scaleCanvas = document.getElementById('scale-chart');
+            const stageCanvas = document.getElementById('stage-chart');
+
+            // 캔버스가 없으면 함수 종료
+            if (!departmentCanvas || !scaleCanvas || !stageCanvas) return;
+
+            // 기존에 있던 차트들은 삭제 (중복 생성 방지)
+            [departmentCanvas, scaleCanvas, stageCanvas].forEach(canvas => {
+                const existingChart = Chart.getChart(canvas);
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+            });
+
+            // 1. 진료과별 분포 (도넛 차트)
+            const departmentData = clinics.reduce((acc, clinic) => {
+                const dept = clinic.department || "미지정";
+                acc[dept] = (acc[dept] || 0) + 1;
+                return acc;
+            }, {});
+            new Chart(departmentCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(departmentData),
+                    datasets: [{
+                        data: Object.values(departmentData),
+                        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 2. 규모별 분포 (막대 차트)
+            const scaleOrder = ['0~5명', '6~10명', '11~15명', '16~20명', '21명 이상'];
+            const scaleCounts = Array(scaleOrder.length).fill(0);
+            clinics.forEach(clinic => {
+                const index = scaleOrder.indexOf(clinic.scale);
+                if (index > -1) scaleCounts[index]++;
+            });
+            new Chart(scaleCanvas, {
+                type: 'bar',
+                data: {
+                    labels: scaleOrder,
+                    datasets: [{
+                        label: '의원 수',
+                        data: scaleCounts,
+                        backgroundColor: '#4e73df'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // 3. 영업 단계별 현황 (수평 막대 차트) - 정수 눈금 적용
+            const stageOrder = ['인지', '관심', '고려', '구매'];
+            const stageCounts = Array(stageOrder.length).fill(0);
+            clinics.forEach(clinic => {
+                const index = stageOrder.indexOf(clinic.stage);
+                if (index > -1) stageCounts[index]++;
+            });
+            new Chart(stageCanvas, {
+                type: 'bar',
+                data: {
+                    labels: stageOrder,
+                    datasets: [{
+                        label: '의원 수',
+                        data: stageCounts,
+                        backgroundColor: ['#f6c23e', '#1cc88a', '#36b9cc', '#4e73df']
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // 수평 막대 차트로 변경
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { // 수평 차트의 값 축은 x축
+                            beginAtZero: true,
+                            min: 0, // 최소값 0으로 강제
+                            ticks: {
+                                precision: 0, // 소수점 없애기 (정수만 표시)
+                                stepSize: 1 // 눈금 단위를 1로 설정
+                            }
+                        }
+                    }
+                }
+            });
+        }
         
         async function updateDashboard() {
             const clinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
