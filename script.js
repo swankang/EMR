@@ -132,7 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     container.appendChild(card);
                 }
             });
-            await renderStatistics(clinics); // You can uncomment this if you have the full function
+            // 바로 이 부분의 주석을 제거!
+            await renderStatistics(clinics); 
         }
 
         function setupDashboard() {
