@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 100);
         }
         
-        async function renderStatistics(clinics) {
+         async function renderStatistics(clinics) {
             const departmentCanvas = document.getElementById('department-chart');
             const scaleCanvas = document.getElementById('scale-chart');
             const stageCanvas = document.getElementById('stage-chart');
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 3. 영업 단계별 현황 (수평 막대 차트) - 정수 눈금 적용
+            // 3. 영업 단계별 현황 (세로 막대 차트로 변경)
             const stageOrder = ['인지', '관심', '고려', '구매'];
             const stageCounts = Array(stageOrder.length).fill(0);
             clinics.forEach(clinic => {
@@ -202,6 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+        }
         
         async function updateDashboard() {
             const clinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
