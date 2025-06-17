@@ -80,22 +80,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
 
         // --- 네이버 지도 API 동적 로딩 ---
-        function loadNaverMapsApi() {
+       function loadNaverMapsApi() {
             return new Promise((resolve, reject) => {
-                if (window.naver && window.naver.maps) {
-                    naverMapsApiLoaded = true;
-                }
-                if (naverMapsApiLoaded) {
+                if (window.naver && window.naver.maps && naverMapsApiLoaded) {
                     return resolve();
                 }
+
+                // 만약 스크립트 태그가 이미 있다면 중복 로딩 방지
+                if (document.querySelector('script[src*="openapi.map.naver.com"]')) {
+                     // 스크립트는 있지만, 로딩 완료를 기다려야 함
+                     naver.maps.onJSContentLoaded(() => {
+                        naverMapsApiLoaded = true;
+                        resolve();
+                     });
+                     return;
+                }
+
                 const mapScript = document.createElement('script');
                 mapScript.type = 'text/javascript';
                 mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=geocoder`;
+                
+                // API 로딩이 완료되면 호출될 함수
                 mapScript.onload = () => {
-                    naverMapsApiLoaded = true;
-                    resolve();
+                    // onJSContentLoaded는 모든 API 기능이 준비되었을 때를 보장함
+                    naver.maps.onJSContentLoaded(() => {
+                        naverMapsApiLoaded = true;
+                        resolve();
+                    });
                 };
-                mapScript.onerror = reject;
+                
+                mapScript.onerror = reject; // 스크립트 로딩 자체를 실패했을 경우
                 document.head.appendChild(mapScript);
             });
         }
