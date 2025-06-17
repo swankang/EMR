@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     datasets: [{
                         label: '의원 수',
                         data: stageCounts,
-                        backgroundColor: ['#f6c23e', '#1cc88a', '#36b9cc', '#4e73df']
+                        backgroundColor: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd']
                     }]
                 },
                 options: {
