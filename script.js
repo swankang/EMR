@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // 2. 규모별 분포 (막대 차트)
-            const scaleOrder = ['0~5명', '6~10명', '11~15명', '16~20명', '21명 이상'];
+            const scaleOrder = ['0~5명', '6~10명', '11~15명', '16명이상'];
             const scaleCounts = Array(scaleOrder.length).fill(0);
             clinics.forEach(clinic => {
                 const index = scaleOrder.indexOf(clinic.scale);
@@ -186,23 +186,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }]
                 },
                 options: {
-                    indexAxis: 'y', // 수평 막대 차트로 변경
+                    // indexAxis: 'y', // 이 줄을 삭제해서 수직으로 변경
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        x: { // 수평 차트의 값 축은 x축
+                        y: { // x축 설정을 y축으로 변경
                             beginAtZero: true,
-                            min: 0, // 최소값 0으로 강제
+                            min: 0,
                             ticks: {
-                                precision: 0, // 소수점 없애기 (정수만 표시)
-                                stepSize: 1 // 눈금 단위를 1로 설정
+                                precision: 0,
+                                stepSize: 1
                             }
                         }
                     }
                 }
             });
-        }
         
         async function updateDashboard() {
             const clinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
