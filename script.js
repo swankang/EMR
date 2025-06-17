@@ -80,36 +80,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
 
         // --- 네이버 지도 API 동적 로딩 ---
-       function loadNaverMapsApi() {
+            function loadNaverMapsApi() {
             return new Promise((resolve, reject) => {
-                if (window.naver && window.naver.maps && naverMapsApiLoaded) {
-                    return resolve();
-                }
-
-                // 만약 스크립트 태그가 이미 있다면 중복 로딩 방지
+                // 스크립트 태그가 이미 존재하면, 로딩 중이거나 완료된 것으로 간주하고 성공 처리
                 if (document.querySelector('script[src*="openapi.map.naver.com"]')) {
-                     // 스크립트는 있지만, 로딩 완료를 기다려야 함
-                     naver.maps.onJSContentLoaded(() => {
-                        naverMapsApiLoaded = true;
-                        resolve();
-                     });
-                     return;
+                   return resolve();
                 }
-
                 const mapScript = document.createElement('script');
                 mapScript.type = 'text/javascript';
                 mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=geocoder`;
-                
-                // API 로딩이 완료되면 호출될 함수
-                mapScript.onload = () => {
-                    // onJSContentLoaded는 모든 API 기능이 준비되었을 때를 보장함
-                    naver.maps.onJSContentLoaded(() => {
-                        naverMapsApiLoaded = true;
-                        resolve();
-                    });
-                };
-                
-                mapScript.onerror = reject; // 스크립트 로딩 자체를 실패했을 경우
+                mapScript.onload = resolve; // 스크립트 파일 다운로드 완료 시 성공
+                mapScript.onerror = reject; // 스크립트 다운로드 실패 시 거부
                 document.head.appendChild(mapScript);
             });
         }
@@ -118,16 +99,35 @@ document.addEventListener('DOMContentLoaded', () => {
         function drawMap(address, name) {
             const mapElement = document.getElementById('map');
             if (!mapElement || !address) return;
-            mapElement.innerHTML = ''; // 이전 지도 초기화
-            naver.maps.Service.geocode({ query: address }, (status, response) => {
-                if (status !== naver.maps.Service.Status.OK || !response.v2.addresses || response.v2.addresses.length === 0) {
-                    mapElement.innerHTML = '<div style="text-align:center; padding: 20px;">주소 좌표를 찾을 수 없습니다.</div>';
-                    return console.warn('Geocode failed for address:', address);
+            mapElement.innerHTML = ''; // 이전 지도/에러 메시지 초기화
+
+            let attempts = 0;
+            const intervalId = setInterval(() => {
+                // 주소 변환(Service) 기능이 준비되었는지 직접 확인
+                if (window.naver && window.naver.maps && window.naver.maps.Service) {
+                    clearInterval(intervalId); // 확인 완료, 반복 중단
+
+                    // 이제 안전하게 주소 변환 및 지도 생성 실행
+                    naver.maps.Service.geocode({ query: address }, (status, response) => {
+                        if (status !== naver.maps.Service.Status.OK || !response.v2.addresses || response.v2.addresses.length === 0) {
+                            mapElement.innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545;">주소의 좌표를 찾을 수 없습니다.</div>';
+                            console.warn('Geocode failed:', response);
+                            return;
+                        }
+                        const point = new naver.maps.Point(response.v2.addresses[0].x, response.v2.addresses[0].y);
+                        const map = new naver.maps.Map(mapElement, { center: point, zoom: 16 });
+                        new naver.maps.Marker({ position: point, map: map, title: name });
+                    });
+                    return;
                 }
-                const point = new naver.maps.Point(response.v2.addresses[0].x, response.v2.addresses[0].y);
-                const map = new naver.maps.Map('map', { center: point, zoom: 16 });
-                new naver.maps.Marker({ position: point, map: map, title: name });
-            });
+
+                attempts++;
+                if (attempts > 50) { // 약 5초 동안 로딩이 안되면 실패 처리
+                    clearInterval(intervalId);
+                    mapElement.innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545;">지도 로딩에 실패했습니다. 네트워크를 확인하거나 페이지를 새로고침하세요.</div>';
+                    console.error("Naver Maps Geocoder did not load in time.");
+                }
+            }, 100); // 0.1초마다 확인
         }
         
         // --- 데이터 렌더링 함수 ---
