@@ -272,11 +272,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        async function renderTodoList() {
+                async function renderTodoList() {
             todoListContainer.innerHTML = ''; // 기존 목록 비우기
             const allTodos = (await todosCollection.orderBy('createdAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // 1. 필터링 (기존과 동일)
             const filteredTodos = allTodos.filter(todo => {
                 if (currentTodoFilter === 'all') return true;
                 if (currentTodoFilter === 'complete') return todo.isComplete;
@@ -285,34 +284,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
             totalTodoCountSpan.textContent = `(총 ${filteredTodos.length}개)`;
             
-            // 2. 현재 페이지에 해당하는 데이터만 자르기 (⭐ 신규 추가)
             const totalPages = Math.ceil(filteredTodos.length / TODO_PAGE_SIZE);
             const startIndex = (currentTodoPage - 1) * TODO_PAGE_SIZE;
             const endIndex = startIndex + TODO_PAGE_SIZE;
             const todosForCurrentPage = filteredTodos.slice(startIndex, endIndex);
 
-            // 3. 화면에 그리기 (잘라낸 데이터로)
-            if (todosForCurrentPage.length === 0) {
+            if (todosForCurrentPage.length === 0 && currentTodoPage === 1) {
                 todoListContainer.innerHTML = '<p style="text-align:center; color:#888; padding: 20px 0;">표시할 일정이 없습니다.</p>';
             } else {
-                const today = new Date(); today.setHours(0, 0, 0, 0);
-                todosForCurrentPage.forEach(todo => {
+                 const today = new Date(); today.setHours(0, 0, 0, 0);
+                 todosForCurrentPage.forEach(todo => {
                     const todoItem = document.createElement('div');
                     todoItem.className = `todo-item ${todo.isComplete ? 'completed' : ''}`;
                     todoItem.dataset.id = todo.id;
-                    const dueDate = new Date(todo.dueDate);
-                    const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-                    let dDayText = `D-${diffDays}`;
-                    let dDayClass = '';
-                    if (diffDays < 0) { dDayText = `D+${Math.abs(diffDays)}`; dDayClass = 'overdue'; }
-                    else if (diffDays === 0) { dDayText = 'D-Day'; }
-                    if (todo.isComplete) { dDayText = '완료'; dDayClass = ''; }
-                    todoItem.innerHTML = `<div class="todo-content">${todo.content}</div><div class="todo-due-date ${dDayClass}">${dDayText}</div><div class="todo-actions"><button class="todo-complete-btn" title="완료">${todo.isComplete ? '✅' : '✔️'}</button><button class="todo-delete-btn" title="삭제">🗑️</button></div>`;
+                    
+                    let dateText = '';
+                    let dateClass = '';
+
+                    // ⭐ 여기가 핵심: 완료 여부에 따라 다른 날짜/텍스트 표시
+                    if (todo.isComplete && todo.completedAt) {
+                        const completedDate = new Date(todo.completedAt.toDate()).toLocaleDateString();
+                        dateText = `✅ ${completedDate} 완료`;
+                        dateClass = 'completed';
+                    } else {
+                        const dueDate = new Date(todo.dueDate); 
+                        const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                        dateText = `D-${diffDays}`; 
+                        dateClass = '';
+                        if (diffDays < 0) { dateText = `D+${Math.abs(diffDays)}`; dateClass = 'overdue'; }
+                        else if (diffDays === 0) { dateText = 'D-Day'; }
+                    }
+
+                    todoItem.innerHTML = `<div class="todo-content">${todo.content}</div><div class="todo-due-date ${dateClass}">${dateText}</div><div class="todo-actions"><button class="todo-complete-btn" title="완료">${todo.isComplete ? '✅' : '✔️'}</button><button class="todo-delete-btn" title="삭제">🗑️</button></div>`;
                     todoListContainer.appendChild(todoItem);
                 });
             }
-            
-            // 4. 페이지네이션 버튼 그리기 (⭐ 신규 추가)
             renderTodoPagination(totalPages);
         }
 
@@ -450,24 +456,45 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('new-todo-content').focus();
         });
 
-        todoListContainer.addEventListener('click', async (e) => {
+         todoListContainer.addEventListener('click', async (e) => {
             const target = e.target;
             const todoItem = target.closest('.todo-item');
 
+            // 새 할 일 저장 로직
             if (target.id === 'save-new-todo-btn') {
                 const content = document.getElementById('new-todo-content').value;
                 const dueDate = document.getElementById('new-todo-due-date').value;
                 if (!content || !dueDate) return alert('내용과 완료예정일을 모두 입력해주세요.');
-                await todosCollection.add({ content, dueDate, isComplete: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                await todosCollection.add({
+                    content,
+                    dueDate,
+                    isComplete: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
                 await renderTodoList();
             } else if (todoItem && todoItem.dataset.id) {
                 const todoId = todoItem.dataset.id;
+                // 할 일 완료/미완료 처리 로직
                 if (target.classList.contains('todo-complete-btn')) {
                     const doc = await todosCollection.doc(todoId).get();
                     if (doc.exists) {
-                        await todosCollection.doc(todoId).update({ isComplete: !doc.data().isComplete });
+                        const isCurrentlyComplete = doc.data().isComplete;
+                        const updatePayload = {
+                            isComplete: !isCurrentlyComplete
+                        };
+
+                        // ⭐ 여기가 핵심: 완료되는 순간에만 날짜를 기록
+                        if (!isCurrentlyComplete) {
+                            updatePayload.completedAt = firebase.firestore.FieldValue.serverTimestamp();
+                        } else {
+                            // 미완료로 되돌릴 경우, 완료 날짜 필드를 삭제
+                            updatePayload.completedAt = firebase.firestore.FieldValue.delete();
+                        }
+                        
+                        await todosCollection.doc(todoId).update(updatePayload);
                         await renderTodoList();
                     }
+                // 할 일 삭제 로직
                 } else if (target.classList.contains('todo-delete-btn')) {
                     if (confirm('정말 이 일정을 삭제하시겠습니까?')) {
                         await todosCollection.doc(todoId).delete();

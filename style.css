@@ -548,3 +548,8 @@ button.danger:hover {
     color: white;
     border-color: var(--primary-color);
 }
+
+.todo-due-date.completed {
+    color: #007bff;
+    font-weight: normal;
+}
