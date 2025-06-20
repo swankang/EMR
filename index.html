@@ -31,7 +31,6 @@
                 <h1>부산의원 관리 <span id="total-clinic-count"></span></h1>
                 <div>
                     <span id="user-email" class="user-email"></span>
-                    <button id="stats-btn">통계</button>
                     <button id="history-btn">히스토리</button>
                     <button id="add-clinic-btn">의원 추가</button>
                     <button id="logout-btn" class="danger">로그아웃</button>
@@ -51,6 +50,18 @@
                 </div>
             </section>
             
+            <section id="stats-section">
+                <div class="stat-card"><h3>진료과별 분포</h3><div class="chart-container"><canvas id="department-chart"></canvas></div></div>
+                <div class="stat-card"><h3>규모별 분포</h3><div class="chart-container"><canvas id="scale-chart"></canvas></div></div>
+                <div class="stat-card"><h3>영업 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
+            </section>
+
+
+
+
+
+
+
             <main id="dashboard-view"></main>
 
             <section id="todo-section">
