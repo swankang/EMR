@@ -1,11 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
-
     const authView = document.getElementById('auth-view');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
-    
     let appInitialized = false;
 
     auth.onAuthStateChanged(user => {
@@ -373,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function buildHistoryHtml() {
             const historyContent = document.getElementById('history-content');
             if(!historyContent) return;
-            const historyData = [ { version: 'v2.1', title: '히스토리 기능 추가 및 UI 개선', date: '2025년 6월 20일', features: ["<b>프로젝트 히스토리 조회:</b> 앱의 버전별 업데이트 내역을 확인할 수 있는 '히스토리' 팝업 기능 추가."] }, { version: 'v2.0', title: '전문가용 기능 확장', date: '2025년 6월 20일', features: ["<b>칸반 보드 UI 개선:</b> 각 단계별 목록의 카드가 5개를 초과할 경우, '더보기/간단히 보기' 버튼으로 목록을 펼치거나 접는 기능 추가.", "<b>통합 검색 기능:</b> '홍보 단계', '진료과', '의원명'의 다중 조건으로 필터링하는 검색 기능 구현.", "<b>실시간 자동완성:</b> 의원명 입력 시, 조건에 맞는 결과가 드롭다운 형태로 실시간 표시.", "<b>성능 최적화:</b> 데이터베이스 조회 로직을 개선, 앱 최초 로딩 시 모든 데이터를 '캐시'하여 이후 작업의 반응 속도를 획기적으로 향상시키고 렌더링 오류 해결."] }, { version: 'v1.2', title: '사용성 및 안정성 개선', date: '2025년 6월 중순', features: ["<b>로그인 세션 정책 변경:</b> 브라우저 종료 시 자동 로그아웃되도록 세션 유지 방식 변경.", "<b>페이지네이션 구현:</b> TO-DO LIST가 5개를 초과할 경우, 페이지 번호로 나눠 볼 수 있는 기능 추가.", "<b>TO-DO LIST 완료일 기록:</b> 할 일 완료 시, D-Day 대신 실제 완료일이 표시되도록 기능 개선."] }, { version: 'v1.1', title: '대시보드 및 편의 기능 고도화', date: '2025년 6월 중순', features: ["<b>통계 대시보드 추가:</b> Chart.js를 활용하여 진료과별, 규모별, 영업 단계별 현황 차트 구현.", "<b>TO-DO LIST 기능 구현:</b> 날짜 기반의 할 일 등록 및 관리 기능 추가.", "<b>사용자 인증 도입:</b> Firebase Authentication을 이용한 로그인/로그아웃 기능 추가."] }, { version: 'v1.0', title: '핵심 기능 완성', date: '2025년 6월 초', features: ["<b>칸반 보드 UI 도입:</b> 영업 단계를 '인지/관심/고려/구매'로 시각화.", "<b>드래그 앤 드롭 기능:</b> 의원 카드를 끌어서 영업 단계를 변경하는 기능 추가.", "<b>상세 정보 조회 및 지도 연동:</b> 의원별 상세 정보 확인 및 네이버 지도 연동.", "<b>메모 기능:</b> 각 의원별 텍스트 메모 기록 및 저장 기능 추가."] }, { version: 'v0.1', title: '초기 아이디어 및 프로토타입', date: '2025년 5월', features: ["Firebase Firestore 데이터베이스 연동.", "모달을 통한 새로운 의원 정보 추가 및 저장 기능 구현."] } ];
+            const historyData = [ { version: 'v2.1', title: 'UI/UX 개선 및 기능 추가', date: '2025년 6월 20일', features: ["<b>프로젝트 히스토리 조회:</b> 앱의 버전별 업데이트 내역을 확인할 수 있는 '히스토리' 팝업 기능 추가.", "<b>통계 팝업 분리:</b> 기존 메인화면에 있던 통계 차트들을 별도의 '통계' 팝업으로 분리하여 기본 화면을 간소화."] }, { version: 'v2.0', title: '전문가용 기능 확장', date: '2025년 6월 20일', features: ["<b>칸반 보드 UI 개선:</b> 각 단계별 목록의 카드가 5개를 초과할 경우, '더보기/간단히 보기' 버튼으로 목록을 펼치거나 접는 기능 추가.", "<b>통합 검색 기능:</b> '홍보 단계', '진료과', '의원명'의 다중 조건으로 필터링하는 검색 기능 구현.", "<b>실시간 자동완성:</b> 의원명 입력 시, 조건에 맞는 결과가 드롭다운 형태로 실시간 표시.", "<b>성능 최적화:</b> 데이터베이스 조회 로직을 개선, 앱 최초 로딩 시 모든 데이터를 '캐시'하여 이후 작업의 반응 속도를 획기적으로 향상시키고 렌더링 오류 해결."] }, { version: 'v1.2', title: '사용성 및 안정성 개선', date: '2025년 6월 중순', features: ["<b>로그인 세션 정책 변경:</b> 브라우저 종료 시 자동 로그아웃되도록 세션 유지 방식 변경.", "<b>페이지네이션 구현:</b> TO-DO LIST가 5개를 초과할 경우, 페이지 번호로 나눠 볼 수 있는 기능 추가.", "<b>TO-DO LIST 완료일 기록:</b> 할 일 완료 시, D-Day 대신 실제 완료일이 표시되도록 기능 개선."] }, { version: 'v1.1', title: '대시보드 및 편의 기능 고도화', date: '2025년 6월 중순', features: ["<b>통계 대시보드 추가:</b> Chart.js를 활용하여 진료과별, 규모별, 영업 단계별 현황 차트 구현.", "<b>TO-DO LIST 기능 구현:</b> 날짜 기반의 할 일 등록 및 관리 기능 추가.", "<b>사용자 인증 도입:</b> Firebase Authentication을 이용한 로그인/로그아웃 기능 추가."] }, { version: 'v1.0', title: '핵심 기능 완성', date: '2025년 6월 초', features: ["<b>칸반 보드 UI 도입:</b> 영업 단계를 '인지/관심/고려/구매'로 시각화.", "<b>드래그 앤 드롭 기능:</b> 의원 카드를 끌어서 영업 단계를 변경하는 기능 추가.", "<b>상세 정보 조회 및 지도 연동:</b> 의원별 상세 정보 확인 및 네이버 지도 연동.", "<b>메모 기능:</b> 각 의원별 텍스트 메모 기록 및 저장 기능 추가."] }, { version: 'v0.1', title: '초기 아이디어 및 프로토타입', date: '2025년 5월', features: ["Firebase Firestore 데이터베이스 연동.", "모달을 통한 새로운 의원 정보 추가 및 저장 기능 구현."] } ];
             let html = '';
             historyData.forEach(item => { html += `<div class="history-version"><h3>${item.version} - ${item.title}</h3><p class="date">${item.date}</p><ul>${item.features.map(feature => `<li>${feature}</li>`).join('')}</ul></div>`; });
             historyContent.innerHTML = html;
@@ -497,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
         statsBtn.addEventListener('click', () => { renderStatistics(); statsModal.classList.remove('hidden'); });
         closeStatsModalBtn.addEventListener('click', () => statsModal.classList.add('hidden'));
         statsModal.addEventListener('click', (e) => { if (e.target === statsModal) statsModal.classList.add('hidden'); });
-
+        
         // --- 앱 초기화 ---
         [allClinics, allTodos] = await Promise.all([
             clinicsCollection.orderBy('updatedAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
