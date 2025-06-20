@@ -75,6 +75,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 이벤트 핸들러 초기화 ---
         if (userEmailSpan) userEmailSpan.textContent = user.email;
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+                // ⭐ --- 검색 이벤트 리스너 (누락된 부분) --- ⭐
+        searchStageSelect.addEventListener('change', filterAndDisplay);
+        searchDepartmentSelect.addEventListener('change', filterAndDisplay);
+        searchNameInput.addEventListener('input', handleAutocomplete);
+        
+        // 검색창 외부 클릭 시 자동완성 결과 숨기기
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-input-wrapper')) {
+                autocompleteResults.classList.add('hidden');
+            }
+        });
         
         // ===============================================================
         //   ▼▼▼ 모든 함수 정의 (Function Definitions) ▼▼▼
