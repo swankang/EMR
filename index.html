@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>부산의원 관리 v2.1.0</title>
+    <title>부산의원 관리 ver.2.0.0</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -28,10 +28,9 @@
     <div class="container hidden" id="app-container">
         <div id="list-view">
             <header>
-                <h1>부산의원 관리 <span id="total-clinic-count"></span></h1>
+                <h1>현황 대시보드 <span id="total-clinic-count"></span></h1>
                 <div>
                     <span id="user-email" class="user-email"></span>
-                    <button id="history-btn">히스토리</button>
                     <button id="add-clinic-btn">의원 추가</button>
                     <button id="logout-btn" class="danger">로그아웃</button>
                 </div>
@@ -53,15 +52,9 @@
             <section id="stats-section">
                 <div class="stat-card"><h3>진료과별 분포</h3><div class="chart-container"><canvas id="department-chart"></canvas></div></div>
                 <div class="stat-card"><h3>규모별 분포</h3><div class="chart-container"><canvas id="scale-chart"></canvas></div></div>
-                <div class="stat-card"><h3>영업 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
+                <div class="stat-card"><h3>홍보 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
             </section>
-
-
-
-
-
-
-
+            
             <main id="dashboard-view"></main>
 
             <section id="todo-section">
@@ -156,26 +149,6 @@
                     </select>
                     <button type="submit">저장</button>
                 </form>
-            </div>
-        </div>
-
-        <div id="history-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-btn">&times;</span>
-                <h2>프로젝트 히스토리</h2>
-                <div id="history-content"></div>
-            </div>
-        </div>
-
-        <div id="stats-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-btn">&times;</span>
-                <h2>통계 대시보드</h2>
-                <section id="stats-section">
-                    <div class="stat-card"><h3>진료과별 분포</h3><div class="chart-container"><canvas id="department-chart"></canvas></div></div>
-                    <div class="stat-card"><h3>규모별 분포</h3><div class="chart-container"><canvas id="scale-chart"></canvas></div></div>
-                    <div class="stat-card"><h3>영업 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
-                </section>
             </div>
         </div>
     </div>
