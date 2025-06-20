@@ -38,58 +38,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const clinicsCollection = db.collection('users').doc(user.uid).collection('clinics');
         const todosCollection = db.collection('users').doc(user.uid).collection('todos');
 
-        // --- DOM 요소 ---
         const userEmailSpan = document.getElementById('user-email');
         const logoutBtn = document.getElementById('logout-btn');
         const addClinicBtn = document.getElementById('add-clinic-btn');
+        const historyBtn = document.getElementById('history-btn');
         const totalClinicCountSpan = document.getElementById('total-clinic-count');
         const dashboardView = document.getElementById('dashboard-view');
         const listView = document.getElementById('list-view');
         const detailView = document.getElementById('detail-view');
-        const modal = document.getElementById('clinic-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const closeModalBtn = document.querySelector('.modal .close-btn');
-        const clinicForm = document.getElementById('clinic-form');
-        const searchAddressBtn = document.getElementById('search-address-btn');
-        const backToListBtn = document.getElementById('back-to-list-btn');
-        const editClinicBtn = document.getElementById('edit-clinic-btn');
-        const deleteClinicBtn = document.getElementById('delete-clinic-btn');
-        const saveMemoBtn = document.getElementById('save-memo-btn');
         const searchStageSelect = document.getElementById('search-stage');
         const searchDepartmentSelect = document.getElementById('search-department');
         const searchNameInput = document.getElementById('search-name');
         const autocompleteResults = document.getElementById('autocomplete-results');
+        const backToListBtn = document.getElementById('back-to-list-btn');
+        const editClinicBtn = document.getElementById('edit-clinic-btn');
+        const deleteClinicBtn = document.getElementById('delete-clinic-btn');
+        const saveMemoBtn = document.getElementById('save-memo-btn');
         const todoListContainer = document.getElementById('todo-list');
         const totalTodoCountSpan = document.getElementById('total-todo-count');
         const filterButtons = document.getElementById('todo-filter-buttons');
         const addTodoBtn = document.getElementById('add-todo-btn');
-
-        // --- 전역 변수 ---
+        const clinicModal = document.getElementById('clinic-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const closeModalBtn = clinicModal.querySelector('.close-btn');
+        const clinicForm = document.getElementById('clinic-form');
+        const searchAddressBtn = document.getElementById('search-address-btn');
+        const historyModal = document.getElementById('history-modal');
+        const closeHistoryModalBtn = historyModal.querySelector('.close-btn');
+        
         let allClinics = [];
         let allTodos = [];
         let currentClinicId = null;
         let currentTodoFilter = 'all';
         let currentTodoPage = 1;
         const TODO_PAGE_SIZE = 5;
-
-        // --- 이벤트 핸들러 초기화 ---
-        if (userEmailSpan) userEmailSpan.textContent = user.email;
-        if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
-                // ⭐ --- 검색 이벤트 리스너 (누락된 부분) --- ⭐
-        searchStageSelect.addEventListener('change', filterAndDisplay);
-        searchDepartmentSelect.addEventListener('change', filterAndDisplay);
-        searchNameInput.addEventListener('input', handleAutocomplete);
-        
-        // 검색창 외부 클릭 시 자동완성 결과 숨기기
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-input-wrapper')) {
-                autocompleteResults.classList.add('hidden');
-            }
-        });
-        
-        // ===============================================================
-        //   ▼▼▼ 모든 함수 정의 (Function Definitions) ▼▼▼
-        // ===============================================================
 
         function loadNaverMapsApi() {
             return new Promise((resolve, reject) => {
@@ -200,12 +182,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardsContainer.dataset.stage = stageInfo.name;
                 column.appendChild(cardsContainer);
                 dashboardView.appendChild(column);
+
                 toggleBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const container = e.target.closest('.stage-column').querySelector('.clinic-cards-container');
                     container.classList.toggle('expanded');
                     e.target.textContent = container.classList.contains('expanded') ? '간단히 보기 ▲' : '더보기 ▼';
                 });
+                
                 new Sortable(cardsContainer, {
                     group: 'shared', animation: 150, ghostClass: 'sortable-ghost',
                     onEnd: async (evt) => {
@@ -259,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function renderStatistics(clinics) {
+            const statsSection = document.getElementById('stats-section');
             const departmentCanvas = document.getElementById('department-chart');
             const scaleCanvas = document.getElementById('scale-chart');
             const stageCanvas = document.getElementById('stage-chart');
@@ -267,6 +252,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const existingChart = Chart.getChart(canvas);
                 if (existingChart) existingChart.destroy();
             });
+            if (clinics.length === 0) {
+                statsSection.classList.add('hidden');
+                return;
+            }
+            statsSection.classList.remove('hidden');
             const departmentData = clinics.reduce((acc, clinic) => {
                 const dept = clinic.department || "미지정";
                 acc[dept] = (acc[dept] || 0) + 1;
@@ -299,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             totalTodoCountSpan.textContent = `(총 ${filteredTodos.length}개)`;
             const totalPages = Math.ceil(filteredTodos.length / TODO_PAGE_SIZE);
+            if(currentTodoPage > totalPages) currentTodoPage = totalPages || 1;
             const startIndex = (currentTodoPage - 1) * TODO_PAGE_SIZE;
             const endIndex = startIndex + TODO_PAGE_SIZE;
             const todosForCurrentPage = filteredTodos.slice(startIndex, endIndex);
@@ -350,9 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function showDetailView(id) {
-            const doc = await clinicsCollection.doc(id).get();
-            if (!doc.exists) return;
-            const clinic = { id: doc.id, ...doc.data() };
+            const clinic = allClinics.find(c => c.id === id);
+            if (!clinic) return;
             currentClinicId = id;
             document.getElementById('detail-clinic-name').textContent = clinic.name;
             document.getElementById('detail-address').textContent = clinic.address;
@@ -381,15 +371,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function execDaumPostcode() { new daum.Postcode({ oncomplete: (data) => { document.getElementById('clinic-address').value = data.roadAddress; document.getElementById("clinic-address-detail").focus(); } }).open(); }
         
+        function buildHistoryHtml() {
+            const historyContent = document.getElementById('history-content');
+            const historyData = [ { version: 'v2.1', title: '히스토리 기능 추가 및 UI 개선', date: '2025년 6월 20일', features: ["<b>프로젝트 히스토리 조회:</b> 앱의 버전별 업데이트 내역을 확인할 수 있는 '히스토리' 팝업 기능 추가."] }, { version: 'v2.0', title: '전문가용 기능 확장', date: '2025년 6월 20일', features: ["<b>칸반 보드 UI 개선:</b> 각 단계별 목록의 카드가 5개를 초과할 경우, '더보기/간단히 보기' 버튼으로 목록을 펼치거나 접는 기능 추가.", "<b>통합 검색 기능:</b> '홍보 단계', '진료과', '의원명'의 다중 조건으로 필터링하는 검색 기능 구현.", "<b>실시간 자동완성:</b> 의원명 입력 시, 조건에 맞는 결과가 드롭다운 형태로 실시간 표시.", "<b>성능 최적화:</b> 데이터베이스 조회 로직을 개선, 앱 최초 로딩 시 모든 데이터를 '캐시'하여 이후 작업의 반응 속도를 획기적으로 향상시키고 렌더링 오류 해결."] }, { version: 'v1.2', title: '사용성 및 안정성 개선', date: '2025년 6월 중순', features: ["<b>로그인 세션 정책 변경:</b> 브라우저 종료 시 자동 로그아웃되도록 세션 유지 방식 변경.", "<b>페이지네이션 구현:</b> TO-DO LIST가 5개를 초과할 경우, 페이지 번호로 나눠 볼 수 있는 기능 추가.", "<b>TO-DO LIST 완료일 기록:</b> 할 일 완료 시, D-Day 대신 실제 완료일이 표시되도록 기능 개선."] }, { version: 'v1.1', title: '대시보드 및 편의 기능 고도화', date: '2025년 6월 중순', features: ["<b>통계 대시보드 추가:</b> Chart.js를 활용하여 진료과별, 규모별, 영업 단계별 현황 차트 구현.", "<b>TO-DO LIST 기능 구현:</b> 날짜 기반의 할 일 등록 및 관리 기능 추가.", "<b>사용자 인증 도입:</b> Firebase Authentication을 이용한 로그인/로그아웃 기능 추가."] }, { version: 'v1.0', title: '핵심 기능 완성', date: '2025년 6월 초', features: ["<b>칸반 보드 UI 도입:</b> 영업 단계를 '인지/관심/고려/구매'로 시각화.", "<b>드래그 앤 드롭 기능:</b> 의원 카드를 끌어서 영업 단계를 변경하는 기능 추가.", "<b>상세 정보 조회 및 지도 연동:</b> 의원별 상세 정보 확인 및 네이버 지도 연동.", "<b>메모 기능:</b> 각 의원별 텍스트 메모 기록 및 저장 기능 추가."] }, { version: 'v0.1', title: '초기 아이디어 및 프로토타입', date: '2025년 5월', features: ["Firebase Firestore 데이터베이스 연동.", "모달을 통한 새로운 의원 정보 추가 및 저장 기능 구현."] } ];
+            let html = '';
+            historyData.forEach(item => { html += `<div class="history-version"><h3>${item.version} - ${item.title}</h3><p class="date">${item.date}</p><ul>${item.features.map(feature => `<li>${feature}</li>`).join('')}</ul></div>`; });
+            historyContent.innerHTML = html;
+        }
+
         // --- 모든 이벤트 리스너 ---
-        addClinicBtn.addEventListener('click', () => {
-            clinicForm.reset();
-            modalTitle.textContent = '의원 정보 입력';
-            document.getElementById('clinic-id').value = '';
-            modal.classList.remove('hidden');
-        });
-        closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
-        modal.addEventListener('click', (e) => { if (e.target === modal) e.target.classList.add('hidden'); });
+        if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+        searchStageSelect.addEventListener('change', filterAndDisplay);
+        searchDepartmentSelect.addEventListener('change', filterAndDisplay);
+        searchNameInput.addEventListener('input', handleAutocomplete);
+        document.addEventListener('click', (e) => { if (!e.target.closest('.search-input-wrapper')) autocompleteResults.classList.add('hidden'); });
+        backToListBtn.addEventListener('click', showListView);
+        addClinicBtn.addEventListener('click', () => { clinicForm.reset(); modalTitle.textContent = '의원 정보 입력'; document.getElementById('clinic-id').value = ''; clinicModal.classList.remove('hidden'); });
+        closeModalBtn.addEventListener('click', () => clinicModal.classList.add('hidden'));
+        clinicModal.addEventListener('click', (e) => { if (e.target === clinicModal) e.target.classList.add('hidden'); });
         searchAddressBtn.addEventListener('click', execDaumPostcode);
         clinicForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -399,15 +398,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clinicId) {
                 await clinicsCollection.doc(clinicId).update(clinicPayload);
             } else {
-                const newDocRef = await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                clinicPayload.id = newDocRef.id;
+                await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
             }
-            modal.classList.add('hidden');
+            clinicModal.classList.add('hidden');
             allClinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
             filterAndDisplay();
             if(!detailView.classList.contains('hidden')) await showDetailView(clinicId);
         });
-        backToListBtn.addEventListener('click', showListView);
         editClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId) return;
             const doc = await clinicsCollection.doc(currentClinicId).get();
@@ -425,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('clinic-scale').value = clinic.scale;
                 document.getElementById('clinic-notes').value = clinic.notes;
                 document.getElementById('clinic-stage').value = clinic.stage;
-                modal.classList.remove('hidden');
+                clinicModal.classList.remove('hidden');
             }
         });
         deleteClinicBtn.addEventListener('click', async () => {
@@ -436,10 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         saveMemoBtn.addEventListener('click', async () => {
             if (!currentClinicId) return;
-            await clinicsCollection.doc(currentClinicId).update({ 
-                memo: document.getElementById('memo-history').value,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
-            });
+            await clinicsCollection.doc(currentClinicId).update({ memo: document.getElementById('memo-history').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
             alert('메모가 저장되었습니다.');
         });
         addTodoBtn.addEventListener('click', () => {
@@ -496,15 +490,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderTodoList();
             }
         });
+        historyBtn.addEventListener('click', () => historyModal.classList.remove('hidden'));
+        closeHistoryModalBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+        historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
 
-        // ===============================================================
-        //   ▼▼▼ 앱 초기화 (App Initialization) ▼▼▼
-        // ===============================================================
+        // --- 앱 초기화 ---
         [allClinics, allTodos] = await Promise.all([
             clinicsCollection.orderBy('updatedAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
             todosCollection.orderBy('createdAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         ]);
-        
+        buildHistoryHtml();
         populateFilters();
         setupDashboard();
         updateDashboard(allClinics);
