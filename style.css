@@ -658,3 +658,10 @@ button.danger:hover {
     color: #6c757d;
     margin-left: 8px;
 }
+
+/* style.css 파일 맨 아래에 추가 */
+.clinic-cards-container.no-scroll {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+}
