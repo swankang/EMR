@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const logoutBtn = document.getElementById('logout-btn');
         const addClinicBtn = document.getElementById('add-clinic-btn');
         const historyBtn = document.getElementById('history-btn');
+        const statsBtn = document.getElementById('stats-btn');
         const totalClinicCountSpan = document.getElementById('total-clinic-count');
         const dashboardView = document.getElementById('dashboard-view');
         const listView = document.getElementById('list-view');
@@ -65,7 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchAddressBtn = document.getElementById('search-address-btn');
         const historyModal = document.getElementById('history-modal');
         const closeHistoryModalBtn = historyModal.querySelector('.close-btn');
-        
+        const statsModal = document.getElementById('stats-modal');
+        const closeStatsModalBtn = statsModal.querySelector('.close-btn');
+
         let allClinics = [];
         let allTodos = [];
         let currentClinicId = null;
@@ -239,11 +242,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     container.appendChild(card);
                 }
             });
-            renderStatistics(clinics); 
         }
 
-        async function renderStatistics(clinics) {
-            const statsSection = document.getElementById('stats-section');
+        function renderStatistics() {
             const departmentCanvas = document.getElementById('department-chart');
             const scaleCanvas = document.getElementById('scale-chart');
             const stageCanvas = document.getElementById('stage-chart');
@@ -252,12 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const existingChart = Chart.getChart(canvas);
                 if (existingChart) existingChart.destroy();
             });
-            if (clinics.length === 0) {
-                statsSection.classList.add('hidden');
-                return;
-            }
-            statsSection.classList.remove('hidden');
-            const departmentData = clinics.reduce((acc, clinic) => {
+            const departmentData = allClinics.reduce((acc, clinic) => {
                 const dept = clinic.department || "미지정";
                 acc[dept] = (acc[dept] || 0) + 1;
                 return acc;
@@ -265,14 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
             new Chart(departmentCanvas, { type: 'doughnut', data: { labels: Object.keys(departmentData), datasets: [{ data: Object.values(departmentData), backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'], hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
             const scaleOrder = ['0~5명', '6~10명', '11~15명', '16명이상'];
             const scaleCounts = Array(scaleOrder.length).fill(0);
-            clinics.forEach(clinic => {
+            allClinics.forEach(clinic => {
                 const index = scaleOrder.indexOf(clinic.scale);
                 if (index > -1) scaleCounts[index]++;
             });
             new Chart(scaleCanvas, { type: 'bar', data: { labels: scaleOrder, datasets: [{ label: '의원 수', data: scaleCounts, backgroundColor: '#4e73df' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } } });
             const stageOrder = ['인지', '관심', '고려', '구매'];
             const stageCounts = Array(stageOrder.length).fill(0);
-            clinics.forEach(clinic => {
+            allClinics.forEach(clinic => {
                 const index = stageOrder.indexOf(clinic.stage);
                 if (index > -1) stageCounts[index]++;
             });
@@ -342,7 +338,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function showDetailView(id) {
             const clinic = allClinics.find(c => c.id === id);
-            if (!clinic) return;
+            if (!clinic) {
+                alert("의원 정보를 찾을 수 없습니다.");
+                return;
+            }
             currentClinicId = id;
             document.getElementById('detail-clinic-name').textContent = clinic.name;
             document.getElementById('detail-address').textContent = clinic.address;
@@ -373,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function buildHistoryHtml() {
             const historyContent = document.getElementById('history-content');
+            if(!historyContent) return;
             const historyData = [ { version: 'v2.1', title: '히스토리 기능 추가 및 UI 개선', date: '2025년 6월 20일', features: ["<b>프로젝트 히스토리 조회:</b> 앱의 버전별 업데이트 내역을 확인할 수 있는 '히스토리' 팝업 기능 추가."] }, { version: 'v2.0', title: '전문가용 기능 확장', date: '2025년 6월 20일', features: ["<b>칸반 보드 UI 개선:</b> 각 단계별 목록의 카드가 5개를 초과할 경우, '더보기/간단히 보기' 버튼으로 목록을 펼치거나 접는 기능 추가.", "<b>통합 검색 기능:</b> '홍보 단계', '진료과', '의원명'의 다중 조건으로 필터링하는 검색 기능 구현.", "<b>실시간 자동완성:</b> 의원명 입력 시, 조건에 맞는 결과가 드롭다운 형태로 실시간 표시.", "<b>성능 최적화:</b> 데이터베이스 조회 로직을 개선, 앱 최초 로딩 시 모든 데이터를 '캐시'하여 이후 작업의 반응 속도를 획기적으로 향상시키고 렌더링 오류 해결."] }, { version: 'v1.2', title: '사용성 및 안정성 개선', date: '2025년 6월 중순', features: ["<b>로그인 세션 정책 변경:</b> 브라우저 종료 시 자동 로그아웃되도록 세션 유지 방식 변경.", "<b>페이지네이션 구현:</b> TO-DO LIST가 5개를 초과할 경우, 페이지 번호로 나눠 볼 수 있는 기능 추가.", "<b>TO-DO LIST 완료일 기록:</b> 할 일 완료 시, D-Day 대신 실제 완료일이 표시되도록 기능 개선."] }, { version: 'v1.1', title: '대시보드 및 편의 기능 고도화', date: '2025년 6월 중순', features: ["<b>통계 대시보드 추가:</b> Chart.js를 활용하여 진료과별, 규모별, 영업 단계별 현황 차트 구현.", "<b>TO-DO LIST 기능 구현:</b> 날짜 기반의 할 일 등록 및 관리 기능 추가.", "<b>사용자 인증 도입:</b> Firebase Authentication을 이용한 로그인/로그아웃 기능 추가."] }, { version: 'v1.0', title: '핵심 기능 완성', date: '2025년 6월 초', features: ["<b>칸반 보드 UI 도입:</b> 영업 단계를 '인지/관심/고려/구매'로 시각화.", "<b>드래그 앤 드롭 기능:</b> 의원 카드를 끌어서 영업 단계를 변경하는 기능 추가.", "<b>상세 정보 조회 및 지도 연동:</b> 의원별 상세 정보 확인 및 네이버 지도 연동.", "<b>메모 기능:</b> 각 의원별 텍스트 메모 기록 및 저장 기능 추가."] }, { version: 'v0.1', title: '초기 아이디어 및 프로토타입', date: '2025년 5월', features: ["Firebase Firestore 데이터베이스 연동.", "모달을 통한 새로운 의원 정보 추가 및 저장 기능 구현."] } ];
             let html = '';
             historyData.forEach(item => { html += `<div class="history-version"><h3>${item.version} - ${item.title}</h3><p class="date">${item.date}</p><ul>${item.features.map(feature => `<li>${feature}</li>`).join('')}</ul></div>`; });
@@ -380,13 +380,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // --- 모든 이벤트 리스너 ---
+        if (userEmailSpan) userEmailSpan.textContent = user.email;
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
         searchStageSelect.addEventListener('change', filterAndDisplay);
         searchDepartmentSelect.addEventListener('change', filterAndDisplay);
         searchNameInput.addEventListener('input', handleAutocomplete);
         document.addEventListener('click', (e) => { if (!e.target.closest('.search-input-wrapper')) autocompleteResults.classList.add('hidden'); });
         backToListBtn.addEventListener('click', showListView);
-        addClinicBtn.addEventListener('click', () => { clinicForm.reset(); modalTitle.textContent = '의원 정보 입력'; document.getElementById('clinic-id').value = ''; clinicModal.classList.remove('hidden'); });
+        addClinicBtn.addEventListener('click', () => { clinicForm.reset(); modalTitle.textContent = '의원 정보 입력'; clinicModal.classList.remove('hidden'); });
         closeModalBtn.addEventListener('click', () => clinicModal.classList.add('hidden'));
         clinicModal.addEventListener('click', (e) => { if (e.target === clinicModal) e.target.classList.add('hidden'); });
         searchAddressBtn.addEventListener('click', execDaumPostcode);
@@ -407,9 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         editClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId) return;
-            const doc = await clinicsCollection.doc(currentClinicId).get();
-            if (doc.exists) {
-                const clinic = { id: doc.id, ...doc.data() };
+            const clinic = allClinics.find(c => c.id === currentClinicId);
+            if (clinic) {
                 modalTitle.textContent = '의원 정보 수정';
                 document.getElementById('clinic-id').value = clinic.id;
                 document.getElementById('clinic-name').value = clinic.name;
@@ -476,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (confirm('정말 이 일정을 삭제하시겠습니까?')) {
                         await todosCollection.doc(todoId).delete();
                         allTodos = allTodos.filter(t => t.id !== todoId);
+                        currentTodoPage = 1;
                         renderTodoList();
                     }
                 }
@@ -493,6 +494,9 @@ document.addEventListener('DOMContentLoaded', () => {
         historyBtn.addEventListener('click', () => historyModal.classList.remove('hidden'));
         closeHistoryModalBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
         historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
+        statsBtn.addEventListener('click', () => { renderStatistics(); statsModal.classList.remove('hidden'); });
+        closeStatsModalBtn.addEventListener('click', () => statsModal.classList.add('hidden'));
+        statsModal.addEventListener('click', (e) => { if (e.target === statsModal) statsModal.classList.add('hidden'); });
 
         // --- 앱 초기화 ---
         [allClinics, allTodos] = await Promise.all([
