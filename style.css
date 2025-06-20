@@ -553,3 +553,108 @@ button.danger:hover {
     color: #007bff;
     font-weight: normal;
 }
+/* ⭐===== 칸반 보드 UI 개선 스타일 (신규 추가) =====⭐ */
+.stage-column h2 {
+    position: relative;
+}
+.toggle-expand-btn {
+    font-size: 13px;
+    font-weight: normal;
+    padding: 3px 10px;
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #ced4da;
+    position: absolute;
+    right: 0;
+    top: -5px;
+}
+.toggle-expand-btn:hover {
+    background-color: #dee2e6;
+}
+.clinic-cards-container {
+    max-height: 450px; /* 카드 5개 정도 높이, 스크롤 생성 */
+    overflow-y: auto;
+    padding-right: 5px; /* 스크롤바 공간 확보 */
+    transition: max-height 0.3s ease-in-out;
+}
+.clinic-cards-container.expanded {
+    max-height: 2000px; /* 충분한 높이로 확장 */
+    overflow-y: hidden;
+}
+/* ⭐===== 칸반 보드 UI 개선 스타일 (신규 추가) =====⭐ */
+.stage-column h2 {
+    position: relative;
+}
+.toggle-expand-btn {
+    font-size: 13px;
+    font-weight: normal;
+    padding: 3px 10px;
+    background-color: #e9ecef;
+    color: #495057;
+    border: 1px solid #ced4da;
+    position: absolute;
+    right: 0;
+    top: -5px;
+}
+.toggle-expand-btn:hover {
+    background-color: #dee2e6;
+}
+.clinic-cards-container {
+    max-height: 450px; /* 카드 5개 정도 높이, 스크롤 생성 */
+    overflow-y: auto;
+    padding-right: 5px; /* 스크롤바 공간 확보 */
+    transition: max-height 0.3s ease-in-out;
+}
+.clinic-cards-container.expanded {
+    max-height: 2000px; /* 충분한 높이로 확장 */
+    overflow-y: hidden;
+}
+
+/* ⭐===== 통합 검색 기능 스타일 (신규 추가) =====⭐ */
+#search-section {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+#search-section select, #search-section input {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+.search-input-wrapper {
+    flex-grow: 1;
+    position: relative;
+}
+#search-name {
+    width: 100%;
+    box-sizing: border-box; /* 패딩 포함해서 너비 100% */
+}
+#autocomplete-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.autocomplete-item {
+    padding: 12px;
+    cursor: pointer;
+}
+.autocomplete-item:hover {
+    background-color: #f0f0f0;
+}
+.autocomplete-item small {
+    color: #6c757d;
+    margin-left: 8px;
+}

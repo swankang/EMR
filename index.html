@@ -35,12 +35,28 @@
                     <button id="logout-btn" class="danger">로그아웃</button>
                 </div>
             </header>
+
+            <section id="search-section">
+                <select id="search-stage">
+                    <option value="">-- 단계 전체 --</option>
+                </select>
+                <select id="search-department">
+                    <option value="">-- 진료과 전체 --</option>
+                </select>
+                <div class="search-input-wrapper">
+                    <input type="text" id="search-name" placeholder="의원명으로 검색..." autocomplete="off">
+                    <div id="autocomplete-results" class="hidden"></div>
+                </div>
+            </section>
+            
             <section id="stats-section">
                 <div class="stat-card"><h3>진료과별 분포</h3><div class="chart-container"><canvas id="department-chart"></canvas></div></div>
                 <div class="stat-card"><h3>규모별 분포</h3><div class="chart-container"><canvas id="scale-chart"></canvas></div></div>
                 <div class="stat-card"><h3>홍보 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
             </section>
+            
             <main id="dashboard-view"></main>
+
             <section id="todo-section">
                 <header class="todo-header">
                     <h2>TO DO LIST <span id="total-todo-count"></span></h2>
@@ -66,7 +82,6 @@
                     <button id="edit-clinic-btn">정보 수정</button>
                     <button id="delete-clinic-btn" class="danger">의원 삭제</button>
                 </div>
-                
             </header>
             <main>
                 <div class="detail-content">
@@ -143,12 +158,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script>
       const firebaseConfig = {
-         apiKey: "AIzaSyDdPfHXVGimvD4rOFcbQERTQVSvp6NWobE",
-         authDomain: "busanemr.firebaseapp.com",
-         projectId: "busanemr",
-         storageBucket: "busanemr.firebasestorage.app",
-         messagingSenderId: "411886133460",
-         appId: "1:411886133460:web:0a8c62fc8a2c43ce8f9b41"
+         apiKey: "YOUR_API_KEY",
+         authDomain: "YOUR_AUTH_DOMAIN",
+         projectId: "YOUR_PROJECT_ID",
+         storageBucket: "YOUR_STORAGE_BUCKET",
+         messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+         appId: "YOUR_APP_ID"
       };
       firebase.initializeApp(firebaseConfig);
     </script>

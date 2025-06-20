@@ -23,23 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-       if (loginBtn) {
+    if (loginBtn) {
         loginBtn.addEventListener('click', () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             if (!email || !password) return alert('이메일과 비밀번호를 모두 입력해주세요.');
-
-            // --- 여기가 핵심! ---
-            // 로그인 방식을 '세션(SESSION)'으로 설정합니다.
             auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
-                .then(() => {
-                    // 세션 설정이 성공하면, 로그인을 시도합니다.
-                    return auth.signInWithEmailAndPassword(email, password);
-                })
-                .catch(error => {
-                    // 세션 설정 또는 로그인 과정에서 오류가 발생한 경우
-                    alert(`로그인 처리 중 오류 발생: ${error.message}`);
-                });
+                .then(() => auth.signInWithEmailAndPassword(email, password))
+                .catch(error => alert(`로그인 처리 중 오류 발생: ${error.message}`));
         });
     }
     
@@ -47,205 +38,116 @@ document.addEventListener('DOMContentLoaded', () => {
         const clinicsCollection = db.collection('users').doc(user.uid).collection('clinics');
         const todosCollection = db.collection('users').doc(user.uid).collection('todos');
 
+        // --- DOM 요소 ---
         const userEmailSpan = document.getElementById('user-email');
         const logoutBtn = document.getElementById('logout-btn');
-        const dashboardView = document.getElementById('dashboard-view');
-        const totalClinicCountSpan = document.getElementById('total-clinic-count');
         const addClinicBtn = document.getElementById('add-clinic-btn');
+        const totalClinicCountSpan = document.getElementById('total-clinic-count');
+        const dashboardView = document.getElementById('dashboard-view');
+        const listView = document.getElementById('list-view');
+        const detailView = document.getElementById('detail-view');
         const modal = document.getElementById('clinic-modal');
         const modalTitle = document.getElementById('modal-title');
         const closeModalBtn = document.querySelector('.modal .close-btn');
         const clinicForm = document.getElementById('clinic-form');
-        const listView = document.getElementById('list-view');
-        const detailView = document.getElementById('detail-view');
+        const searchAddressBtn = document.getElementById('search-address-btn');
         const backToListBtn = document.getElementById('back-to-list-btn');
         const editClinicBtn = document.getElementById('edit-clinic-btn');
         const deleteClinicBtn = document.getElementById('delete-clinic-btn');
         const saveMemoBtn = document.getElementById('save-memo-btn');
-        const searchAddressBtn = document.getElementById('search-address-btn');
+
+        const searchStageSelect = document.getElementById('search-stage');
+        const searchDepartmentSelect = document.getElementById('search-department');
+        const searchNameInput = document.getElementById('search-name');
+        const autocompleteResults = document.getElementById('autocomplete-results');
+        
         const todoListContainer = document.getElementById('todo-list');
         const totalTodoCountSpan = document.getElementById('total-todo-count');
         const filterButtons = document.getElementById('todo-filter-buttons');
         const addTodoBtn = document.getElementById('add-todo-btn');
 
+        // --- 전역 변수 ---
+        let allClinics = [];
         let currentClinicId = null;
         let currentTodoFilter = 'all';
-        let currentTodoPage = 1; // 현재 페이지 번호 (1부터 시작)
-        const TODO_PAGE_SIZE = 5; // 한 페이지에 보여줄 항목 수
+        let currentTodoPage = 1;
+        const TODO_PAGE_SIZE = 5;
 
+        // --- 이벤트 핸들러 초기화 ---
         if (userEmailSpan) userEmailSpan.textContent = user.email;
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
-        
 
-
-        function loadNaverMapsApi() {
-            return new Promise((resolve, reject) => {
-                if (document.querySelector('script[src*="openapi.map.naver.com"]')) {
-                   return resolve();
-                }
-                const mapScript = document.createElement('script');
-                mapScript.type = 'text/javascript';
-                mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=geocoder`;
-                mapScript.onload = resolve;
-                mapScript.onerror = reject;
-                document.head.appendChild(mapScript);
+        // --- 검색 및 필터링 로직 ---
+        function populateFilters() {
+            const stages = ['인지', '관심', '고려', '구매'];
+            const departments = ['피부과', '가정의학과', '내과', '정형외과', '치과', '한의원', '정신병원'];
+            stages.forEach(stage => {
+                const option = document.createElement('option');
+                option.value = stage; option.textContent = stage;
+                searchStageSelect.appendChild(option);
+            });
+            departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept; option.textContent = dept;
+                searchDepartmentSelect.appendChild(option);
             });
         }
 
-        function drawMap(address, name) {
-            const mapElement = document.getElementById('map');
-            if (!mapElement || !address) return;
-            mapElement.innerHTML = '';
+        function filterAndDisplay() {
+            const stage = searchStageSelect.value;
+            const department = searchDepartmentSelect.value;
+            const name = searchNameInput.value.toLowerCase();
+            let filtered = allClinics;
+            if (stage) {
+                filtered = filtered.filter(clinic => clinic.stage === stage);
+            }
+            if (department) {
+                filtered = filtered.filter(clinic => clinic.department === department);
+            }
+            if (name) {
+                filtered = filtered.filter(clinic => clinic.name.toLowerCase().includes(name));
+            }
+            updateDashboard(filtered);
+            return filtered;
+        }
 
-            let attempts = 0;
-            const intervalId = setInterval(() => {
-                if (window.naver && window.naver.maps && window.naver.maps.Service) {
-                    clearInterval(intervalId);
-                    naver.maps.Service.geocode({ query: address }, (status, response) => {
-                        if (status !== naver.maps.Service.Status.OK || !response.v2.addresses || response.v2.addresses.length === 0) {
-                            mapElement.innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545;">주소의 좌표를 찾을 수 없습니다.</div>';
-                            return;
-                        }
-                        const point = new naver.maps.Point(response.v2.addresses[0].x, response.v2.addresses[0].y);
-                        const map = new naver.maps.Map(mapElement, { center: point, zoom: 16 });
-                        new naver.maps.Marker({ position: point, map: map, title: name });
+        function handleAutocomplete() {
+            const name = searchNameInput.value.toLowerCase();
+            autocompleteResults.innerHTML = '';
+            if (name.length === 0) {
+                autocompleteResults.classList.add('hidden');
+                filterAndDisplay();
+                return;
+            }
+            const filtered = filterAndDisplay();
+            if (filtered.length > 0) {
+                autocompleteResults.classList.remove('hidden');
+                filtered.slice(0, 7).forEach(clinic => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.innerHTML = `${clinic.name} <small>${clinic.department}, ${clinic.stage}</small>`;
+                    item.addEventListener('click', () => {
+                        showDetailView(clinic.id);
+                        searchNameInput.value = '';
+                        autocompleteResults.classList.add('hidden');
                     });
-                    return;
-                }
-                attempts++;
-                if (attempts > 50) {
-                    clearInterval(intervalId);
-                    mapElement.innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545;">지도 로딩에 실패했습니다.</div>';
-                }
-            }, 100);
+                    autocompleteResults.appendChild(item);
+                });
+            } else {
+                autocompleteResults.classList.add('hidden');
+            }
         }
         
-         async function renderStatistics(clinics) {
-            const departmentCanvas = document.getElementById('department-chart');
-            const scaleCanvas = document.getElementById('scale-chart');
-            const stageCanvas = document.getElementById('stage-chart');
+        searchStageSelect.addEventListener('change', filterAndDisplay);
+        searchDepartmentSelect.addEventListener('change', filterAndDisplay);
+        searchNameInput.addEventListener('input', handleAutocomplete);
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-input-wrapper')) {
+                autocompleteResults.classList.add('hidden');
+            }
+        });
 
-            // 캔버스가 없으면 함수 종료
-            if (!departmentCanvas || !scaleCanvas || !stageCanvas) return;
-
-            // 기존에 있던 차트들은 삭제 (중복 생성 방지)
-            [departmentCanvas, scaleCanvas, stageCanvas].forEach(canvas => {
-                const existingChart = Chart.getChart(canvas);
-                if (existingChart) {
-                    existingChart.destroy();
-                }
-            });
-
-            // 1. 진료과별 분포 (도넛 차트)
-            const departmentData = clinics.reduce((acc, clinic) => {
-                const dept = clinic.department || "미지정";
-                acc[dept] = (acc[dept] || 0) + 1;
-                return acc;
-            }, {});
-            new Chart(departmentCanvas, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(departmentData),
-                    datasets: [{
-                        data: Object.values(departmentData),
-                        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'],
-                        hoverOffset: 4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
-            // 2. 규모별 분포 (막대 차트)
-            const scaleOrder = ['0~5명', '6~10명', '11~15명', '16명이상'];
-            const scaleCounts = Array(scaleOrder.length).fill(0);
-            clinics.forEach(clinic => {
-                const index = scaleOrder.indexOf(clinic.scale);
-                if (index > -1) scaleCounts[index]++;
-            });
-            new Chart(scaleCanvas, {
-                type: 'bar',
-                data: {
-                    labels: scaleOrder,
-                    datasets: [{
-                        label: '의원 수',
-                        data: scaleCounts,
-                        backgroundColor: '#4e73df'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            // 3. 영업 단계별 현황 (세로 막대 차트로 변경)
-            const stageOrder = ['인지', '관심', '고려', '구매'];
-            const stageCounts = Array(stageOrder.length).fill(0);
-            clinics.forEach(clinic => {
-                const index = stageOrder.indexOf(clinic.stage);
-                if (index > -1) stageCounts[index]++;
-            });
-            new Chart(stageCanvas, {
-                type: 'bar',
-                data: {
-                    labels: stageOrder,
-                    datasets: [{
-                        label: '의원 수',
-                        data: stageCounts,
-                        backgroundColor: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd']
-                    }]
-                },
-                options: {
-                    // indexAxis: 'y', // 이 줄을 삭제해서 수직으로 변경
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { // x축 설정을 y축으로 변경
-                            beginAtZero: true,
-                            min: 0,
-                            ticks: {
-                                precision: 0,
-                                stepSize: 1
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        async function updateDashboard() {
-            const clinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            totalClinicCountSpan.textContent = `(총 ${clinics.length}곳)`;
-            
-            document.querySelectorAll('.clinic-cards-container').forEach(c => c.innerHTML = '');
-            document.querySelectorAll('.stage-column h2').forEach(header => {
-                const stageName = header.dataset.stageName;
-                const stageClinics = clinics.filter(c => c.stage === stageName);
-                header.innerHTML = `${stageName} <span class="count">${stageClinics.length}곳 / ${clinics.length > 0 ? ((stageClinics.length / clinics.length) * 100).toFixed(0) : 0}%</span>`;
-            });
-
-            clinics.forEach(clinic => {
-                const stageName = clinic.stage || '인지';
-                const container = document.querySelector(`.clinic-cards-container[data-stage="${stageName}"]`);
-                if(container) {
-                    const card = document.createElement('div');
-                    card.className = 'clinic-card';
-                    card.dataset.id = clinic.id;
-                    const updatedAt = clinic.updatedAt ? new Date(clinic.updatedAt.toDate()).toLocaleDateString() : '날짜 정보 없음';
-                    card.innerHTML = `<h3>${clinic.name}</h3><p>${clinic.address.split(',')[0]}</p><p class="date">업데이트: ${updatedAt}</p>`;
-                    card.addEventListener('click', () => showDetailView(clinic.id));
-                    container.appendChild(card);
-                }
-            });
-            // 바로 이 부분의 주석을 제거!
-            await renderStatistics(clinics); 
-        }
-
+        // --- 칸반 보드 UI 개선 로직 ---
         function setupDashboard() {
             dashboardView.innerHTML = '';
             const stages = [ { name: '인지', id: 'awareness' }, { name: '관심', id: 'interest' }, { name: '고려', id: 'consideration' }, { name: '구매', id: 'purchase' } ];
@@ -254,41 +156,113 @@ document.addEventListener('DOMContentLoaded', () => {
                 column.className = `stage-column stage-${stageInfo.id}`;
                 const columnHeader = document.createElement('h2');
                 columnHeader.dataset.stageName = stageInfo.name;
+                const titleSpan = document.createElement('span');
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'toggle-expand-btn';
+                toggleBtn.textContent = '더보기 ▼';
+                columnHeader.appendChild(titleSpan);
+                columnHeader.appendChild(toggleBtn);
                 column.appendChild(columnHeader);
                 const cardsContainer = document.createElement('div');
                 cardsContainer.className = 'clinic-cards-container';
                 cardsContainer.dataset.stage = stageInfo.name;
                 column.appendChild(cardsContainer);
                 dashboardView.appendChild(column);
+
+                toggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const container = e.target.closest('.stage-column').querySelector('.clinic-cards-container');
+                    container.classList.toggle('expanded');
+                    e.target.textContent = container.classList.contains('expanded') ? '간단히 보기 ▲' : '더보기 ▼';
+                });
+                
                 new Sortable(cardsContainer, {
                     group: 'shared', animation: 150, ghostClass: 'sortable-ghost',
                     onEnd: async function (evt) {
-                        const newStage = evt.to.dataset.stage;
                         const clinicId = evt.item.dataset.id;
+                        const newStage = evt.to.dataset.stage;
                         await clinicsCollection.doc(clinicId).update({ stage: newStage, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-                        await updateDashboard();
+                        const clinicToUpdate = allClinics.find(c => c.id === clinicId);
+                        if (clinicToUpdate) {
+                            clinicToUpdate.stage = newStage;
+                            clinicToUpdate.updatedAt = firebase.firestore.Timestamp.now();
+                        }
+                        filterAndDisplay();
                     }
                 });
             });
         }
         
-                async function renderTodoList() {
-            todoListContainer.innerHTML = ''; // 기존 목록 비우기
-            const allTodos = (await todosCollection.orderBy('createdAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        function updateDashboard(clinicsToRender) {
+            const clinics = clinicsToRender;
+            totalClinicCountSpan.textContent = `(총 ${allClinics.length}곳)`;
+            document.querySelectorAll('.clinic-cards-container').forEach(c => c.innerHTML = '');
+            document.querySelectorAll('.stage-column h2').forEach(header => {
+                const stageName = header.dataset.stageName;
+                const stageClinics = clinics.filter(c => c.stage === stageName);
+                header.querySelector('span').textContent = `${stageName} (${stageClinics.length}곳)`;
+            });
+            clinics.forEach(clinic => {
+                const container = document.querySelector(`.clinic-cards-container[data-stage="${clinic.stage}"]`);
+                if(container) {
+                    const card = document.createElement('div');
+                    card.className = 'clinic-card';
+                    card.dataset.id = clinic.id;
+                    card.innerHTML = `<h3>${clinic.name}</h3><p>${clinic.address.split(',')[0]}</p>`;
+                    card.addEventListener('click', () => showDetailView(clinic.id));
+                    container.appendChild(card);
+                }
+            });
+            renderStatistics(clinics); 
+        }
 
+        async function renderStatistics(clinics) {
+            const departmentCanvas = document.getElementById('department-chart');
+            const scaleCanvas = document.getElementById('scale-chart');
+            const stageCanvas = document.getElementById('stage-chart');
+            if (!departmentCanvas || !scaleCanvas || !stageCanvas) return;
+            [departmentCanvas, scaleCanvas, stageCanvas].forEach(canvas => {
+                const existingChart = Chart.getChart(canvas);
+                if (existingChart) existingChart.destroy();
+            });
+            const departmentData = clinics.reduce((acc, clinic) => {
+                const dept = clinic.department || "미지정";
+                acc[dept] = (acc[dept] || 0) + 1;
+                return acc;
+            }, {});
+            new Chart(departmentCanvas, { type: 'doughnut', data: { labels: Object.keys(departmentData), datasets: [{ data: Object.values(departmentData), backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'], hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
+            const scaleOrder = ['0~5명', '6~10명', '11~15명', '16명이상'];
+            const scaleCounts = Array(scaleOrder.length).fill(0);
+            clinics.forEach(clinic => {
+                const index = scaleOrder.indexOf(clinic.scale);
+                if (index > -1) scaleCounts[index]++;
+            });
+            new Chart(scaleCanvas, { type: 'bar', data: { labels: scaleOrder, datasets: [{ label: '의원 수', data: scaleCounts, backgroundColor: '#4e73df' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } } });
+            const stageOrder = ['인지', '관심', '고려', '구매'];
+            const stageCounts = Array(stageOrder.length).fill(0);
+            clinics.forEach(clinic => {
+                const index = stageOrder.indexOf(clinic.stage);
+                if (index > -1) stageCounts[index]++;
+            });
+            new Chart(stageCanvas, { type: 'bar', data: { labels: stageOrder, datasets: [{ label: '의원 수', data: stageCounts, backgroundColor: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, min: 0, ticks: { precision: 0, stepSize: 1 } } } } });
+        }
+        
+        async function renderTodoList() {
+            const todoListContainer = document.getElementById('todo-list');
+            const totalTodoCountSpan = document.getElementById('total-todo-count');
+            if(!todoListContainer || !totalTodoCountSpan) return;
+            todoListContainer.innerHTML = '';
+            const allTodos = (await todosCollection.orderBy('createdAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const filteredTodos = allTodos.filter(todo => {
                 if (currentTodoFilter === 'all') return true;
                 if (currentTodoFilter === 'complete') return todo.isComplete;
                 return !todo.isComplete;
             });
-
             totalTodoCountSpan.textContent = `(총 ${filteredTodos.length}개)`;
-            
             const totalPages = Math.ceil(filteredTodos.length / TODO_PAGE_SIZE);
             const startIndex = (currentTodoPage - 1) * TODO_PAGE_SIZE;
             const endIndex = startIndex + TODO_PAGE_SIZE;
             const todosForCurrentPage = filteredTodos.slice(startIndex, endIndex);
-
             if (todosForCurrentPage.length === 0 && currentTodoPage === 1) {
                 todoListContainer.innerHTML = '<p style="text-align:center; color:#888; padding: 20px 0;">표시할 일정이 없습니다.</p>';
             } else {
@@ -297,11 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const todoItem = document.createElement('div');
                     todoItem.className = `todo-item ${todo.isComplete ? 'completed' : ''}`;
                     todoItem.dataset.id = todo.id;
-                    
                     let dateText = '';
                     let dateClass = '';
-
-                    // ⭐ 여기가 핵심: 완료 여부에 따라 다른 날짜/텍스트 표시
                     if (todo.isComplete && todo.completedAt) {
                         const completedDate = new Date(todo.completedAt.toDate()).toLocaleDateString();
                         dateText = `✅ ${completedDate} 완료`;
@@ -314,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (diffDays < 0) { dateText = `D+${Math.abs(diffDays)}`; dateClass = 'overdue'; }
                         else if (diffDays === 0) { dateText = 'D-Day'; }
                     }
-
                     todoItem.innerHTML = `<div class="todo-content">${todo.content}</div><div class="todo-due-date ${dateClass}">${dateText}</div><div class="todo-actions"><button class="todo-complete-btn" title="완료">${todo.isComplete ? '✅' : '✔️'}</button><button class="todo-delete-btn" title="삭제">🗑️</button></div>`;
                     todoListContainer.appendChild(todoItem);
                 });
@@ -324,32 +294,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function renderTodoPagination(totalPages) {
             const paginationContainer = document.getElementById('todo-pagination');
-            paginationContainer.innerHTML = ''; // 기존 버튼 비우기
-
-            // 총 페이지가 1 이하면 페이지네이션 표시 안 함
+            if (!paginationContainer) return;
+            paginationContainer.innerHTML = '';
             if (totalPages <= 1) return;
-
             for (let i = 1; i <= totalPages; i++) {
                 const pageBtn = document.createElement('button');
                 pageBtn.className = 'pagination-btn';
                 pageBtn.textContent = i;
-
-                if (i === currentTodoPage) {
-                    pageBtn.classList.add('active');
-                }
-
+                if (i === currentTodoPage) pageBtn.classList.add('active');
                 pageBtn.addEventListener('click', () => {
-                    currentTodoPage = i; // 페이지 번호 변경
-                    renderTodoList(); // 목록 다시 그리기
+                    currentTodoPage = i;
+                    renderTodoList();
                 });
-
                 paginationContainer.appendChild(pageBtn);
             }
         }
-
-
-
-
 
         async function showDetailView(id) {
             const doc = await clinicsCollection.doc(id).get();
@@ -366,45 +325,67 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('detail-notes').textContent = clinic.notes || '-';
             document.getElementById('detail-updated').textContent = (clinic.updatedAt && clinic.updatedAt.toDate) ? new Date(clinic.updatedAt.toDate()).toLocaleString() : '정보 없음';
             document.getElementById('memo-history').value = clinic.memo || '';
-            listView.classList.add('hidden');
+            document.getElementById('list-view').classList.add('hidden');
             detailView.classList.remove('hidden');
             try {
                 await loadNaverMapsApi();
                 drawMap(clinic.address, clinic.name);
-            } catch (error) {
-                console.error("Naver Maps API 로딩 실패:", error);
-            }
+            } catch (error) { console.error("Naver Maps API 로딩 실패:", error); }
         }
 
-        function showListView() { currentClinicId = null; detailView.classList.add('hidden'); listView.classList.remove('hidden'); updateDashboard(); }
+        function showListView() {
+            currentClinicId = null;
+            detailView.classList.add('hidden');
+            document.getElementById('list-view').classList.remove('hidden');
+            filterAndDisplay();
+        }
         
         function execDaumPostcode() { new daum.Postcode({ oncomplete: (data) => { document.getElementById('clinic-address').value = data.roadAddress; document.getElementById("clinic-address-detail").focus(); } }).open(); }
+        
+        addClinicBtn.addEventListener('click', () => {
+            const clinicForm = document.getElementById('clinic-form');
+            const modalTitle = document.getElementById('modal-title');
+            const modal = document.getElementById('clinic-modal');
+            clinicForm.reset();
+            modalTitle.textContent = '의원 정보 입력';
+            document.getElementById('clinic-id').value = '';
+            modal.classList.remove('hidden');
+        });
 
-        addClinicBtn.addEventListener('click', () => { clinicForm.reset(); modalTitle.textContent = '의원 정보 입력'; document.getElementById('clinic-id').value = ''; modal.classList.remove('hidden'); });
-        
-        closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
-        
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
-        
+        document.querySelector('.modal .close-btn').addEventListener('click', () => {
+            document.getElementById('clinic-modal').classList.add('hidden');
+        });
+        document.getElementById('clinic-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'clinic-modal') {
+                e.target.classList.add('hidden');
+            }
+        });
+
         searchAddressBtn.addEventListener('click', execDaumPostcode);
         
-        clinicForm.addEventListener('submit', async (e) => {
+        document.getElementById('clinic-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const mainAddress = document.getElementById('clinic-address').value;
-            const detailAddress = document.getElementById('clinic-address-detail').value;
-            const fullAddress = detailAddress ? `${mainAddress}, ${detailAddress}` : mainAddress;
             const clinicId = document.getElementById('clinic-id').value;
+            const fullAddress = `${document.getElementById('clinic-address').value}, ${document.getElementById('clinic-address-detail').value}`;
             const clinicPayload = {
-                name: document.getElementById('clinic-name').value, address: fullAddress, manager: document.getElementById('clinic-manager').value, contact: document.getElementById('clinic-contact').value, department: document.getElementById('clinic-department').value, scale: document.getElementById('clinic-scale').value, notes: document.getElementById('clinic-notes').value, stage: document.getElementById('clinic-stage').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                name: document.getElementById('clinic-name').value,
+                address: fullAddress,
+                manager: document.getElementById('clinic-manager').value,
+                contact: document.getElementById('clinic-contact').value,
+                department: document.getElementById('clinic-department').value,
+                scale: document.getElementById('clinic-scale').value,
+                notes: document.getElementById('clinic-notes').value,
+                stage: document.getElementById('clinic-stage').value,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            
             if (clinicId) {
                 await clinicsCollection.doc(clinicId).update(clinicPayload);
             } else {
                 await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
             }
-            modal.classList.add('hidden');
-            await updateDashboard();
+            document.getElementById('clinic-modal').classList.add('hidden');
+            allClinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            filterAndDisplay();
             if(!detailView.classList.contains('hidden')) {
                await showDetailView(clinicId);
             }
@@ -417,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const doc = await clinicsCollection.doc(currentClinicId).get();
             if (doc.exists) {
                 const clinic = { id: doc.id, ...doc.data() };
-                modalTitle.textContent = '의원 정보 수정';
+                document.getElementById('modal-title').textContent = '의원 정보 수정';
                 document.getElementById('clinic-id').value = clinic.id;
                 document.getElementById('clinic-name').value = clinic.name;
                 const addressParts = clinic.address.split(',');
@@ -429,13 +410,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('clinic-scale').value = clinic.scale;
                 document.getElementById('clinic-notes').value = clinic.notes;
                 document.getElementById('clinic-stage').value = clinic.stage;
-                modal.classList.remove('hidden');
+                document.getElementById('clinic-modal').classList.remove('hidden');
             }
         });
 
         deleteClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return;
             await clinicsCollection.doc(currentClinicId).delete();
+            allClinics = allClinics.filter(c => c.id !== currentClinicId);
             showListView();
         });
 
@@ -444,7 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const memo = document.getElementById('memo-history').value;
             await clinicsCollection.doc(currentClinicId).update({ memo: memo, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
             alert('메모가 저장되었습니다.');
-            await showDetailView(currentClinicId);
         });
         
         addTodoBtn.addEventListener('click', () => {
@@ -456,45 +437,30 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('new-todo-content').focus();
         });
 
-         todoListContainer.addEventListener('click', async (e) => {
+        todoListContainer.addEventListener('click', async (e) => {
             const target = e.target;
             const todoItem = target.closest('.todo-item');
-
-            // 새 할 일 저장 로직
             if (target.id === 'save-new-todo-btn') {
                 const content = document.getElementById('new-todo-content').value;
                 const dueDate = document.getElementById('new-todo-due-date').value;
                 if (!content || !dueDate) return alert('내용과 완료예정일을 모두 입력해주세요.');
-                await todosCollection.add({
-                    content,
-                    dueDate,
-                    isComplete: false,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                await todosCollection.add({ content, dueDate, isComplete: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                 await renderTodoList();
             } else if (todoItem && todoItem.dataset.id) {
                 const todoId = todoItem.dataset.id;
-                // 할 일 완료/미완료 처리 로직
                 if (target.classList.contains('todo-complete-btn')) {
                     const doc = await todosCollection.doc(todoId).get();
                     if (doc.exists) {
                         const isCurrentlyComplete = doc.data().isComplete;
-                        const updatePayload = {
-                            isComplete: !isCurrentlyComplete
-                        };
-
-                        // ⭐ 여기가 핵심: 완료되는 순간에만 날짜를 기록
+                        const updatePayload = { isComplete: !isCurrentlyComplete };
                         if (!isCurrentlyComplete) {
                             updatePayload.completedAt = firebase.firestore.FieldValue.serverTimestamp();
                         } else {
-                            // 미완료로 되돌릴 경우, 완료 날짜 필드를 삭제
                             updatePayload.completedAt = firebase.firestore.FieldValue.delete();
                         }
-                        
                         await todosCollection.doc(todoId).update(updatePayload);
                         await renderTodoList();
                     }
-                // 할 일 삭제 로직
                 } else if (target.classList.contains('todo-delete-btn')) {
                     if (confirm('정말 이 일정을 삭제하시겠습니까?')) {
                         await todosCollection.doc(todoId).delete();
@@ -507,15 +473,18 @@ document.addEventListener('DOMContentLoaded', () => {
         filterButtons.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 currentTodoFilter = e.target.dataset.filter;
-                currentTodoPage = 1; // ⭐ 필터 변경 시 1페이지로 리셋
+                currentTodoPage = 1;
                 document.querySelectorAll('#todo-filter-buttons .filter-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 renderTodoList();
             }
         });
 
+        // --- 앱 초기화 ---
+        allClinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        populateFilters();
         setupDashboard();
-        await updateDashboard();
-        await renderTodoList();
+        updateDashboard(allClinics);
+        renderTodoList();
     }
 });
