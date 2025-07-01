@@ -358,18 +358,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // --- 4. '한 번만' 등록하면 되는 모든 이벤트 리스너 ---
+    // --- '한 번만' 등록하면 되는 모든 이벤트 리스너 (안전장치 추가됨) ---
     function setupStaticEventListeners() {
-        logoutBtn.addEventListener('click', () => auth.signOut());
-        searchStageSelect.addEventListener('change', filterAndDisplay);
-        searchDepartmentSelect.addEventListener('change', filterAndDisplay);
-        searchNameInput.addEventListener('input', handleAutocomplete);
-        document.addEventListener('click', (e) => { if (!e.target.closest('.search-input-wrapper')) autocompleteResults.classList.add('hidden'); });
-        backToListBtn.addEventListener('click', showListView);
-        addClinicBtn.addEventListener('click', () => { clinicForm.reset(); modalTitle.textContent = '의원 정보 입력'; clinicModal.classList.remove('hidden'); });
-        closeModalBtn.addEventListener('click', () => clinicModal.classList.add('hidden'));
-        clinicModal.addEventListener('click', (e) => { if (e.target === clinicModal) e.target.classList.add('hidden'); });
-        searchAddressBtn.addEventListener('click', execDaumPostcode);
-        clinicForm.addEventListener('submit', async (e) => {
+        if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+        
+        if (searchStageSelect) searchStageSelect.addEventListener('change', filterAndDisplay);
+        if (searchDepartmentSelect) searchDepartmentSelect.addEventListener('change', filterAndDisplay);
+        if (searchNameInput) searchNameInput.addEventListener('input', handleAutocomplete);
+        
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-input-wrapper')) {
+                autocompleteResults.classList.add('hidden');
+            }
+        });
+
+        if (backToListBtn) backToListBtn.addEventListener('click', showListView);
+        if (addClinicBtn) addClinicBtn.addEventListener('click', () => { clinicForm.reset(); modalTitle.textContent = '의원 정보 입력'; clinicModal.classList.remove('hidden'); });
+        if (closeModalBtn) closeModalBtn.addEventListener('click', () => clinicModal.classList.add('hidden'));
+        if (clinicModal) clinicModal.addEventListener('click', (e) => { if (e.target === clinicModal) e.target.classList.add('hidden'); });
+        if (searchAddressBtn) searchAddressBtn.addEventListener('click', execDaumPostcode);
+        
+        if (clinicForm) clinicForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentUser) return alert("로그인이 필요합니다.");
             const clinicId = document.getElementById('clinic-id').value;
@@ -385,7 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
             filterAndDisplay();
             if(!detailView.classList.contains('hidden')) await showDetailView(clinicId);
         });
-        editClinicBtn.addEventListener('click', async () => {
+
+        if (editClinicBtn) editClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId) return;
             const clinic = allClinics.find(c => c.id === currentClinicId);
             if (clinic) {
@@ -404,6 +414,81 @@ document.addEventListener('DOMContentLoaded', () => {
                 clinicModal.classList.remove('hidden');
             }
         });
+
+        if (deleteClinicBtn) deleteClinicBtn.addEventListener('click', async () => {
+            if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return;
+            await clinicsCollection.doc(currentClinicId).delete();
+            allClinics = allClinics.filter(c => c.id !== currentClinicId);
+            showListView();
+        });
+
+        if (saveMemoBtn) saveMemoBtn.addEventListener('click', async () => {
+            if (!currentClinicId) return;
+            await clinicsCollection.doc(currentClinicId).update({ memo: document.getElementById('memo-history').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            alert('메모가 저장되었습니다.');
+        });
+
+        if (addTodoBtn) addTodoBtn.addEventListener('click', () => {
+            if (document.querySelector('.todo-add-form')) return;
+            const formItem = document.createElement('div');
+            formItem.className = 'todo-item todo-add-form';
+            formItem.innerHTML = `<input type="text" id="new-todo-content" placeholder="새로운 할 일 내용 입력" required><input type="date" id="new-todo-due-date" required><div class="todo-actions" style="opacity:1;"><button id="save-new-todo-btn">저장</button></div>`;
+            todoListContainer.prepend(formItem);
+            document.getElementById('new-todo-content').focus();
+        });
+
+        if (todoListContainer) todoListContainer.addEventListener('click', async (e) => {
+            const target = e.target;
+            const todoItem = target.closest('.todo-item');
+            if (target.id === 'save-new-todo-btn') {
+                const content = document.getElementById('new-todo-content').value;
+                const dueDate = document.getElementById('new-todo-due-date').value;
+                if (!content || !dueDate) return alert('내용과 완료예정일을 모두 입력해주세요.');
+                const newTodoRef = await todosCollection.add({ content, dueDate, isComplete: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                const newTodoData = { id: newTodoRef.id, content, dueDate, isComplete: false, createdAt: firebase.firestore.Timestamp.now() };
+                allTodos.unshift(newTodoData);
+                renderTodoList();
+            } else if (todoItem && todoItem.dataset.id) {
+                const todoId = todoItem.dataset.id;
+                const todoToUpdate = allTodos.find(t => t.id === todoId);
+                if (!todoToUpdate) return;
+                if (target.classList.contains('todo-complete-btn')) {
+                    const newIsComplete = !todoToUpdate.isComplete;
+                    const updatePayload = { isComplete: newIsComplete };
+                    if (newIsComplete) {
+                        updatePayload.completedAt = firebase.firestore.FieldValue.serverTimestamp();
+                        todoToUpdate.completedAt = firebase.firestore.Timestamp.now();
+                    } else {
+                        updatePayload.completedAt = firebase.firestore.FieldValue.delete();
+                        delete todoToUpdate.completedAt;
+                    }
+                    await todosCollection.doc(todoId).update(updatePayload);
+                    todoToUpdate.isComplete = newIsComplete;
+                    renderTodoList();
+                } else if (target.classList.contains('todo-delete-btn')) {
+                    if (confirm('정말 이 일정을 삭제하시겠습니까?')) {
+                        await todosCollection.doc(todoId).delete();
+                        allTodos = allTodos.filter(t => t.id !== todoId);
+                        renderTodoList();
+                    }
+                }
+            }
+        });
+
+        if (filterButtons) filterButtons.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                currentTodoFilter = e.target.dataset.filter;
+                currentTodoPage = 1;
+                document.querySelectorAll('#todo-filter-buttons .filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                renderTodoList();
+            }
+        });
+        
+        if (historyBtn) historyBtn.addEventListener('click', () => historyModal.classList.remove('hidden'));
+        if (closeHistoryModalBtn) closeHistoryModalBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+        if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
+    }
         deleteClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return;
             await clinicsCollection.doc(currentClinicId).delete();
