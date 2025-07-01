@@ -27,38 +27,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // [수정] 지도 API 로딩 함수의 파라미터 이름을 ncpClientId 로 최종 수정
-    function loadNaverMapsApi() {
-        const checkReady = (resolve) => {
-            const interval = setInterval(() => {
-                if (window.naver && window.naver.maps && window.naver.maps.Service) {
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 100);
-        };
-
-        return new Promise((resolve, reject) => {
-            if (window.naver && window.naver.maps && window.naver.maps.Service) {
-                return resolve();
+  function loadNaverMapsApi() {
+    const checkReady = (resolve) => {
+        const interval = setInterval(() => {
+            if (window.naver && window.naver.maps) {
+                clearInterval(interval);
+                resolve();
             }
+        }, 100);
+    };
 
-            // Client ID가 포함된 스크립트 태그를 찾음
-            const existingScript = document.querySelector('script[src*="ncpClientId="]');
+    return new Promise((resolve, reject) => {
+        if (window.naver && window.naver.maps) {
+            return resolve();
+        }
 
-            if (existingScript) {
-                return checkReady(resolve);
-            }
+        const existingScript = document.querySelector('script[src*="d7528qc21z="]');
+        if (existingScript) return checkReady(resolve);
 
-            const mapScript = document.createElement('script');
-            mapScript.type = 'text/javascript';
-            // [핵심 수정] ncpKeyId -> ncpClientId
-            mapScript.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=d7528qc21z&submodules=services`;
-            mapScript.onerror = reject;
-            mapScript.onload = () => checkReady(resolve);
+        const mapScript = document.createElement('script');
+        mapScript.type = 'text/javascript';
+        mapScript.src = 'https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=d7528qc21z'; // 서브모듈 제거
+        mapScript.onerror = reject;
+        mapScript.onload = () => checkReady(resolve);
 
-            document.head.appendChild(mapScript);
-        });
-    }
+        document.head.appendChild(mapScript);
+    });
+}
+
+
+
 
     auth.onAuthStateChanged(user => {
         const isUserLoggedIn = !!user;
