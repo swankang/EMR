@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
+
     const authView = document.getElementById('auth-view');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
@@ -62,6 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalTodoCountSpan = document.getElementById('total-todo-count');
         const filterButtons = document.getElementById('todo-filter-buttons');
         const addTodoBtn = document.getElementById('add-todo-btn');
+        const loadMoreBtn = document.getElementById('load-more-clinics-btn'); // ⭐ [수정됨] 더보기 버튼 추가
+        const loadMoreContainer = document.getElementById('load-more-container'); // ⭐ [수정됨] 더보기 컨테이너 추가
 
         // --- 전역 변수 ---
         let allClinics = [];
@@ -71,24 +74,59 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentTodoPage = 1;
         const TODO_PAGE_SIZE = 5;
 
-        // --- 이벤트 핸들러 초기화 ---
-        if (userEmailSpan) userEmailSpan.textContent = user.email;
-        if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
-                // ⭐ --- 검색 이벤트 리스너 (누락된 부분) --- ⭐
-        searchStageSelect.addEventListener('change', filterAndDisplay);
-        searchDepartmentSelect.addEventListener('change', filterAndDisplay);
-        searchNameInput.addEventListener('input', handleAutocomplete);
-        
-        // 검색창 외부 클릭 시 자동완성 결과 숨기기
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-input-wrapper')) {
-                autocompleteResults.classList.add('hidden');
-            }
-        });
-        
+        // ⭐ [수정됨] 페이지네이션 관련 변수 추가
+        let lastVisibleClinic = null; // 마지막으로 불러온 의원 데이터 추적용
+        let isLoadingClinics = false; // 데이터 로딩 중복 방지용
+        const CLINIC_PAGE_SIZE = 20; // 한 번에 불러올 의원 수
+        let totalClinicsInDB = 0; // DB에 있는 전체 의원 수
+
         // ===============================================================
         //   ▼▼▼ 모든 함수 정의 (Function Definitions) ▼▼▼
         // ===============================================================
+
+        // ⭐ [수정됨] 의원 데이터를 페이지 단위로 불러오는 함수
+        async function fetchClinics(isInitialLoad = false) {
+            if (isLoadingClinics) return;
+            isLoadingClinics = true;
+            loadMoreBtn.textContent = '불러오는 중...';
+
+            let query = clinicsCollection.orderBy('updatedAt', 'desc').limit(CLINIC_PAGE_SIZE);
+
+            if (isInitialLoad) {
+                // 처음 로드할 때 전체 의원 수 한번만 가져오기
+                const countSnapshot = await clinicsCollection.get();
+                totalClinicsInDB = countSnapshot.size;
+            } else if (lastVisibleClinic) {
+                // 더보기 클릭 시
+                query = query.startAfter(lastVisibleClinic);
+            }
+
+            try {
+                const snapshot = await query.get();
+                const newClinics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                if (isInitialLoad) {
+                    allClinics = newClinics;
+                } else {
+                    allClinics.push(...newClinics); // 기존 목록에 새 목록 추가
+                }
+
+                lastVisibleClinic = snapshot.docs[snapshot.docs.length - 1];
+                filterAndDisplay(); // 화면 업데이트
+
+                if (!lastVisibleClinic || allClinics.length >= totalClinicsInDB) {
+                    loadMoreContainer.classList.add('hidden'); // 더 불러올 데이터 없으면 버튼 숨김
+                } else {
+                    loadMoreContainer.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("의원 정보 로딩 중 오류 발생:", error);
+                alert('의원 정보를 불러오는 데 실패했습니다.');
+            } finally {
+                isLoadingClinics = false;
+                loadMoreBtn.textContent = '더 많은 의원 보기';
+            }
+        }
 
         function loadNaverMapsApi() {
             return new Promise((resolve, reject) => {
@@ -150,6 +188,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (department) filtered = filtered.filter(clinic => clinic.department === department);
             if (name) filtered = filtered.filter(clinic => clinic.name.toLowerCase().includes(name));
             updateDashboard(filtered);
+            
+            // 이름으로 검색할 때는 '더보기' 버튼 숨기기
+            if (name) {
+                loadMoreContainer.classList.add('hidden');
+            } else if (lastVisibleClinic && allClinics.length < totalClinicsInDB) {
+                loadMoreContainer.classList.remove('hidden');
+            }
+            
             return filtered;
         }
 
@@ -211,12 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const clinicId = evt.item.dataset.id;
                         const newStage = evt.to.dataset.stage;
                         await clinicsCollection.doc(clinicId).update({ stage: newStage, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-                        const clinicToUpdate = allClinics.find(c => c.id === clinicId);
-                        if (clinicToUpdate) {
-                            clinicToUpdate.stage = newStage;
-                            clinicToUpdate.updatedAt = firebase.firestore.Timestamp.now();
-                        }
-                        filterAndDisplay();
+                        
+                        // ⭐ [수정됨] 전체 리스트 다시 불러오기
+                        await fetchClinics(true);
                     }
                 });
             });
@@ -224,7 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function updateDashboard(clinicsToRender) {
             const clinics = clinicsToRender;
-            totalClinicCountSpan.textContent = `(총 ${allClinics.length}곳)`;
+            totalClinicCountSpan.textContent = `(총 ${totalClinicsInDB}곳)`; // 전체 DB 기준으로 표시
             document.querySelectorAll('.stage-column h2').forEach(header => {
                 const stageName = header.dataset.stageName;
                 const stageClinics = clinics.filter(c => c.stage === stageName);
@@ -254,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     container.appendChild(card);
                 }
             });
-            renderStatistics(clinics); 
+            renderStatistics(allClinics); // 통계는 현재 로드된 모든 의원 기준으로
         }
 
         async function renderStatistics(clinics) {
@@ -349,9 +392,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function showDetailView(id) {
-            const doc = await clinicsCollection.doc(id).get();
-            if (!doc.exists) return;
-            const clinic = { id: doc.id, ...doc.data() };
+            // ⭐ [수정됨] 로컬 데이터 우선 사용, 없으면 DB에서 조회
+            let clinic = allClinics.find(c => c.id === id);
+            if (!clinic) {
+                const doc = await clinicsCollection.doc(id).get();
+                if (!doc.exists) return;
+                clinic = { id: doc.id, ...doc.data() };
+            }
+
             currentClinicId = id;
             document.getElementById('detail-clinic-name').textContent = clinic.name;
             document.getElementById('detail-address').textContent = clinic.address;
@@ -381,6 +429,16 @@ document.addEventListener('DOMContentLoaded', () => {
         function execDaumPostcode() { new daum.Postcode({ oncomplete: (data) => { document.getElementById('clinic-address').value = data.roadAddress; document.getElementById("clinic-address-detail").focus(); } }).open(); }
         
         // --- 모든 이벤트 리스너 ---
+        if (userEmailSpan) userEmailSpan.textContent = user.email;
+        if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+        searchStageSelect.addEventListener('change', filterAndDisplay);
+        searchDepartmentSelect.addEventListener('change', filterAndDisplay);
+        searchNameInput.addEventListener('input', handleAutocomplete);
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-input-wrapper')) {
+                autocompleteResults.classList.add('hidden');
+            }
+        });
         addClinicBtn.addEventListener('click', () => {
             clinicForm.reset();
             modalTitle.textContent = '의원 정보 입력';
@@ -398,13 +456,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clinicId) {
                 await clinicsCollection.doc(clinicId).update(clinicPayload);
             } else {
-                const newDocRef = await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                clinicPayload.id = newDocRef.id;
+                await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
             }
             modal.classList.add('hidden');
-            allClinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            filterAndDisplay();
-            if(!detailView.classList.contains('hidden')) await showDetailView(clinicId);
+            
+            // ⭐ [수정됨] 데이터 변경 후, 처음부터 다시 로드하여 최신 상태 반영
+            await fetchClinics(true);
+            if(!detailView.classList.contains('hidden') && clinicId) await showDetailView(clinicId);
         });
         backToListBtn.addEventListener('click', showListView);
         editClinicBtn.addEventListener('click', async () => {
@@ -430,7 +488,9 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return;
             await clinicsCollection.doc(currentClinicId).delete();
-            allClinics = allClinics.filter(c => c.id !== currentClinicId);
+
+            // ⭐ [수정됨] 데이터 변경 후, 처음부터 다시 로드하여 최신 상태 반영
+            await fetchClinics(true);
             showListView();
         });
         saveMemoBtn.addEventListener('click', async () => {
@@ -440,6 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
             });
             alert('메모가 저장되었습니다.');
+            await fetchClinics(true); // 메모 저장도 업데이트이므로 목록 다시 로드
         });
         addTodoBtn.addEventListener('click', () => {
             if (document.querySelector('.todo-add-form')) return;
@@ -495,14 +556,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderTodoList();
             }
         });
+        loadMoreBtn.addEventListener('click', () => fetchClinics(false)); // ⭐ [수정됨] 더보기 버튼 이벤트 리스너
 
         // ===============================================================
         //   ▼▼▼ 앱 초기화 (App Initialization) ▼▼▼
         // ===============================================================
-        [allClinics, allTodos] = await Promise.all([
-            clinicsCollection.orderBy('updatedAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
-            todosCollection.orderBy('createdAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
-        ]);
+
+        // ⭐ [수정됨] 초기 데이터 로딩 방식 변경
+        await fetchClinics(true); // 의원 목록 첫 페이지 로드
+        allTodos = await todosCollection.orderBy('createdAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         
         populateFilters();
         setupDashboard();
