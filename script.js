@@ -487,7 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
             appContainer.classList.remove('hidden');
             if (!appInitialized) {
                 initializeApp();
-                setupStaticEventListeners();
                 appInitialized = true;
             }
         } else {
