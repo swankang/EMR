@@ -1,13 +1,13 @@
 const consoleStyle_title = 'color: #4e73df; font-size: 24px; font-weight: bold;';
 const consoleStyle_body = 'font-size: 14px; line-height: 1.5;';
 console.log('%c🏥 부산의원 관리 Final Version', consoleStyle_title);
-console.log('%c최종 안정화 버전입니다.', consoleStyle_body);
+console.log('%c최종 안정화 버전입니다. 모든 기능이 포함되어 있습니다.', consoleStyle_body);
 
 document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // DOM 요소
+    // 1. DOM 요소 가져오기
     const authView = document.getElementById('auth-view');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
@@ -38,8 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const addTodoBtn = document.getElementById('add-todo-btn');
     const historyModal = document.getElementById('history-modal');
     const closeHistoryModalBtn = document.getElementById('close-history-modal-btn');
+    const statsSection = document.getElementById('stats-section');
 
-    // 전역 상태
+    // 2. 전역 상태 변수
     let appInitialized = false;
     let allClinics = [];
     let allTodos = [];
@@ -51,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let clinicsCollection = null;
     let todosCollection = null;
 
-    // 함수 정의
+    // 3. 모든 함수 정의
     function loadNaverMapsApi() {
         return new Promise((resolve, reject) => {
             if (window.naver && window.naver.maps) return resolve();
@@ -89,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateFilters() {
+        if (!searchStageSelect || !searchDepartmentSelect) return;
         searchStageSelect.innerHTML = '<option value="">-- 단계 전체 --</option>';
         searchDepartmentSelect.innerHTML = '<option value="">-- 진료과 전체 --</option>';
         const stages = ['인지', '관심', '고려', '구매'];
@@ -96,16 +98,17 @@ document.addEventListener('DOMContentLoaded', () => {
         stages.forEach(stage => {
             const option = document.createElement('option');
             option.value = stage; option.textContent = stage;
-            if(searchStageSelect) searchStageSelect.appendChild(option);
+            searchStageSelect.appendChild(option);
         });
         departments.forEach(dept => {
             const option = document.createElement('option');
             option.value = dept; option.textContent = dept;
-            if(searchDepartmentSelect) searchDepartmentSelect.appendChild(option);
+            searchDepartmentSelect.appendChild(option);
         });
     }
 
     function filterAndDisplay() {
+        if (!searchStageSelect || !searchDepartmentSelect || !searchNameInput) return;
         const stage = searchStageSelect.value;
         const department = searchDepartmentSelect.value;
         const name = searchNameInput.value.toLowerCase();
@@ -145,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function setupDashboard() {
+        if (!dashboardView) return;
         dashboardView.innerHTML = '';
         const stages = [ { name: '인지', id: 'awareness' }, { name: '관심', id: 'interest' }, { name: '고려', id: 'consideration' }, { name: '구매', id: 'purchase' } ];
         stages.forEach(stageInfo => {
@@ -355,8 +359,16 @@ document.addEventListener('DOMContentLoaded', () => {
         historyContent.innerHTML = html;
     }
     
-    // --- 4. '한 번만' 등록하면 되는 모든 이벤트 리스너 ---
-    function setupStaticEventListeners() {
+    // --- 4. 로그인 성공 후 앱 초기화 함수 ---
+    async function initializeApp(user) {
+        // 컬렉션 정의
+        clinicsCollection = db.collection('users').doc(user.uid).collection('clinics');
+        todosCollection = db.collection('users').doc(user.uid).collection('todos');
+
+        // 사용자 정보 표시
+        if (userEmailSpan) userEmailSpan.textContent = user.email;
+
+        // 이벤트 리스너 등록
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
         if (searchStageSelect) searchStageSelect.addEventListener('change', filterAndDisplay);
         if (searchDepartmentSelect) searchDepartmentSelect.addEventListener('change', filterAndDisplay);
@@ -369,7 +381,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchAddressBtn) searchAddressBtn.addEventListener('click', execDaumPostcode);
         if (clinicForm) clinicForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!currentUser) return alert("로그인이 필요합니다.");
             const clinicId = document.getElementById('clinic-id').value;
             const fullAddress = `${document.getElementById('clinic-address').value.trim()}, ${document.getElementById('clinic-address-detail').value.trim()}`.replace(/, $/, "");
             const clinicPayload = { name: document.getElementById('clinic-name').value, address: fullAddress, manager: document.getElementById('clinic-manager').value, contact: document.getElementById('clinic-contact').value, department: document.getElementById('clinic-department').value, scale: document.getElementById('clinic-scale').value, notes: document.getElementById('clinic-notes').value, stage: document.getElementById('clinic-stage').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
@@ -386,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clinicModal.classList.add('hidden');
             filterAndDisplay();
         });
-        if (editClinicBtn) editClinicBtn.addEventListener('click', async () => {
+        if (editClinicBtn) editClinicBtn.addEventListener('click', () => {
             if (!currentClinicId) return;
             const clinic = allClinics.find(c => c.id === currentClinicId);
             if (clinic) {
@@ -474,41 +485,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyBtn) historyBtn.addEventListener('click', () => { buildHistoryHtml(); if(historyModal) historyModal.classList.remove('hidden'); });
         if (closeHistoryModalBtn) closeHistoryModalBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
         if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
-    }
 
-    // --- 5. 로그인/아웃 상태 변경 감지 ---
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            currentUser = user;
-            authView.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            if (!appInitialized) {
-                initializeApp();
-                setupStaticEventListeners();
-                appInitialized = true;
-            }
-        } else {
-            currentUser = null;
-            authView.classList.remove('hidden');
-            appContainer.classList.add('hidden');
-            appInitialized = false;
-        }
-    });
-
-    // --- 6. 로그인 성공 시 데이터 로딩 및 최초 렌더링 ---
-    async function initializeApp() {
-        if (!currentUser) return;
-        userEmailSpan.textContent = currentUser.email;
-        clinicsCollection = db.collection('users').doc(currentUser.uid).collection('clinics');
-        todosCollection = db.collection('users').doc(currentUser.uid).collection('todos');
+        // 데이터 로딩 및 최초 렌더링
         [allClinics, allTodos] = await Promise.all([
             clinicsCollection.orderBy('updatedAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
             todosCollection.orderBy('createdAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
         ]);
+        
         populateFilters();
         setupDashboard();
         updateDashboard(allClinics);
         renderTodoList();
-        buildHistoryHtml();
     }
 });
