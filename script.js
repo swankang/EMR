@@ -500,6 +500,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+// ⭐ 로그인 버튼 이벤트 리스너 (누락된 부분) ⭐
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if (!email || !password) return alert('이메일과 비밀번호를 모두 입력해주세요.');
+            
+            auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+                .then(() => {
+                    return auth.signInWithEmailAndPassword(email, password);
+                })
+                .catch(error => {
+                    alert(`로그인 처리 중 오류 발생: ${error.message}`);
+                });
+        });
+    }
+
     // --- 6. 로그인 성공 시 데이터 로딩 및 최초 렌더링 ---
     async function initializeApp() {
         if (!currentUser) return;
