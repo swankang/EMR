@@ -1,12 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
-
     const authView = document.getElementById('auth-view');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
     
     let appInitialized = false;
+
+    console.log('%c다음 프로젝트는 UX리서치 관련 내용', consoleStyle_title);
+    console.log('%c재미로 만들어봤는데 엉망진창입니다', consoleStyle_body);
+
 
     auth.onAuthStateChanged(user => {
         if (user) {
