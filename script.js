@@ -28,12 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadNaverMapsApi() {
         return new Promise((resolve, reject) => {
-            if (window.naver && window.naver.maps) {
+            // [수정] Service 모듈까지 완전히 로드되었는지 확인
+            if (window.naver && window.naver.maps && window.naver.maps.Service) {
                 return resolve();
             }
             if (document.querySelector('script[src*="ncpKeyId=d7528qc21z"]')) {
                 const interval = setInterval(() => {
-                    if (window.naver && window.naver.maps) {
+                    // [수정] 더 구체적으로 Service 모듈까지 확인
+                    if (window.naver && window.naver.maps && window.naver.maps.Service) {
                         clearInterval(interval);
                         resolve();
                     }
@@ -42,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const mapScript = document.createElement('script');
             mapScript.type = 'text/javascript';
-            // [수정] submodules=geocoder -> submodules=services 로 변경
             mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=services`;
             mapScript.onload = resolve;
             mapScript.onerror = reject;
@@ -402,8 +403,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawMap(address, name) {
-        if (!window.naver || !window.naver.maps) {
-            return console.error("Naver Maps API not loaded.");
+        // [수정] Service 모듈 존재 여부까지 확인하여 안정성 강화
+        if (!window.naver || !window.naver.maps || !window.naver.maps.Service) {
+            console.error("Naver Maps API or its Service module is not loaded.");
+            showToast("지도 모듈 로딩에 실패했습니다. 잠시 후 다시 시도해주세요.");
+            return;
         }
         const mapElement = document.getElementById('map');
         mapElement.innerHTML = ''; 
