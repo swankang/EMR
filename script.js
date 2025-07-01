@@ -20,26 +20,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardView = document.getElementById('dashboard-view');
     const listView = document.getElementById('list-view');
     const detailView = document.getElementById('detail-view');
-    const searchStageSelect = document.getElementById('search-stage');
-    const searchDepartmentSelect = document.getElementById('search-department');
-    const searchNameInput = document.getElementById('search-name');
-    const autocompleteResults = document.getElementById('autocomplete-results');
+    const clinicModal = document.getElementById('clinic-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const closeModalBtn = document.getElementById('close-clinic-modal-btn');
+    const clinicForm = document.getElementById('clinic-form');
+    const searchAddressBtn = document.getElementById('search-address-btn');
     const backToListBtn = document.getElementById('back-to-list-btn');
     const editClinicBtn = document.getElementById('edit-clinic-btn');
     const deleteClinicBtn = document.getElementById('delete-clinic-btn');
     const saveMemoBtn = document.getElementById('save-memo-btn');
+    const searchStageSelect = document.getElementById('search-stage');
+    const searchDepartmentSelect = document.getElementById('search-department');
+    const searchNameInput = document.getElementById('search-name');
+    const autocompleteResults = document.getElementById('autocomplete-results');
     const todoListContainer = document.getElementById('todo-list');
     const totalTodoCountSpan = document.getElementById('total-todo-count');
     const filterButtons = document.getElementById('todo-filter-buttons');
     const addTodoBtn = document.getElementById('add-todo-btn');
-    const clinicModal = document.getElementById('clinic-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const closeModalBtn = clinicModal.querySelector('.close-btn');
-    const clinicForm = document.getElementById('clinic-form');
-    const searchAddressBtn = document.getElementById('search-address-btn');
     const historyModal = document.getElementById('history-modal');
-    const closeHistoryModalBtn = historyModal.querySelector('.close-btn');
-    const statsSection = document.getElementById('stats-section');
+    const closeHistoryModalBtn = document.getElementById('close-history-modal-btn');
 
     // --- 2. 전역 상태 변수 선언 ---
     let allClinics = [];
@@ -53,7 +52,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let todosCollection = null;
 
     // --- 3. 모든 함수 정의 ---
-    
+    function loadNaverMapsApi() { /* ... 네가 준 코드와 동일 ... */ }
+    function drawMap(address, name) { /* ... 네가 준 코드와 동일 ... */ }
+    function populateFilters() { /* ... 네가 준 코드와 동일 ... */ }
+    function filterAndDisplay() { /* ... 네가 준 코드와 동일 ... */ }
+    function handleAutocomplete() { /* ... 네가 준 코드와 동일 ... */ }
+    function setupDashboard() { /* ... 네가 준 코드와 동일 ... */ }
+    function updateDashboard(clinicsToRender) { /* ... 네가 준 코드와 동일 ... */ }
+    function renderStatistics(clinics) { /* ... 네가 준 코드와 동일 ... */ }
+    function renderTodoList() { /* ... 네가 준 코드와 동일 ... */ }
+    function renderTodoPagination(totalPages) { /* ... 네가 준 코드와 동일 ... */ }
+    async function showDetailView(id) { /* ... 네가 준 코드와 동일 ... */ }
+    function showListView() { /* ... 네가 준 코드와 동일 ... */ }
+    function execDaumPostcode() { /* ... 네가 준 코드와 동일 ... */ }
+    function buildHistoryHtml() { /* ... 네가 준 코드와 동일 ... */ }
+
+    // (함수 정의 복사)
     function loadNaverMapsApi() {
         return new Promise((resolve, reject) => {
             if (window.naver && window.naver.maps) return resolve();
@@ -65,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.head.appendChild(mapScript);
         });
     }
-
     function drawMap(address, name) {
         const mapElement = document.getElementById('map');
         if (!mapElement || !address) return;
@@ -89,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (attempts > 50) { clearInterval(intervalId); mapElement.innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545;">지도 로딩에 실패했습니다.</div>'; }
         }, 100);
     }
-
     function populateFilters() {
         const stages = ['인지', '관심', '고려', '구매'];
         const departments = ['피부과', '가정의학과', '내과', '정형외과', '치과', '한의원', '정신병원'];
@@ -104,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
             searchDepartmentSelect.appendChild(option);
         });
     }
-
     function filterAndDisplay() {
         const stage = searchStageSelect.value;
         const department = searchDepartmentSelect.value;
@@ -116,7 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDashboard(filtered);
         return filtered;
     }
-
     function handleAutocomplete() {
         const name = searchNameInput.value.toLowerCase();
         autocompleteResults.innerHTML = '';
@@ -143,7 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
             autocompleteResults.classList.add('hidden');
         }
     }
-    
     function setupDashboard() {
         dashboardView.innerHTML = '';
         const stages = [ { name: '인지', id: 'awareness' }, { name: '관심', id: 'interest' }, { name: '고려', id: 'consideration' }, { name: '구매', id: 'purchase' } ];
@@ -163,14 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
             cardsContainer.dataset.stage = stageInfo.name;
             column.appendChild(cardsContainer);
             dashboardView.appendChild(column);
-
             toggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const container = e.target.closest('.stage-column').querySelector('.clinic-cards-container');
                 container.classList.toggle('expanded');
                 e.target.textContent = container.classList.contains('expanded') ? '간단히 보기 ▲' : '더보기 ▼';
             });
-            
             new Sortable(cardsContainer, {
                 group: 'shared', animation: 150, ghostClass: 'sortable-ghost',
                 onEnd: async (evt) => {
@@ -187,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-    
     function updateDashboard(clinicsToRender) {
         const clinics = clinicsToRender;
         totalClinicCountSpan.textContent = `(총 ${allClinics.length}곳)`;
@@ -222,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     function renderStatistics(clinics) {
         const departmentCanvas = document.getElementById('department-chart');
         const scaleCanvas = document.getElementById('scale-chart');
@@ -253,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         new Chart(stageCanvas, { type: 'bar', data: { labels: stageOrder, datasets: [{ label: '의원 수', data: stageCounts, backgroundColor: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, min: 0, ticks: { precision: 0, stepSize: 1 } } } } });
     }
-    
     function renderTodoList() {
         if(!todoListContainer || !totalTodoCountSpan) return;
         todoListContainer.innerHTML = '';
@@ -296,7 +300,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderTodoPagination(totalPages);
     }
-
     function renderTodoPagination(totalPages) {
         const paginationContainer = document.getElementById('todo-pagination');
         if (!paginationContainer) return;
@@ -314,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
             paginationContainer.appendChild(pageBtn);
         }
     }
-
     async function showDetailView(id) {
         const clinic = allClinics.find(c => c.id === id);
         if (!clinic) { alert("의원 정보를 찾을 수 없습니다."); return; }
@@ -336,16 +338,13 @@ document.addEventListener('DOMContentLoaded', () => {
             drawMap(clinic.address, clinic.name);
         } catch (error) { console.error("Naver Maps API 로딩 실패:", error); }
     }
-
     function showListView() {
         currentClinicId = null;
         detailView.classList.add('hidden');
         listView.classList.remove('hidden');
         filterAndDisplay();
     }
-    
     function execDaumPostcode() { new daum.Postcode({ oncomplete: (data) => { document.getElementById('clinic-address').value = data.roadAddress; document.getElementById("clinic-address-detail").focus(); } }).open(); }
-    
     function buildHistoryHtml() {
         const historyContent = document.getElementById('history-content');
         if(!historyContent) return;
@@ -357,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- 4. '한 번만' 등록하면 되는 모든 이벤트 리스너 ---
     function setupStaticEventListeners() {
-        if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
+        logoutBtn.addEventListener('click', () => auth.signOut());
         searchStageSelect.addEventListener('change', filterAndDisplay);
         searchDepartmentSelect.addEventListener('change', filterAndDisplay);
         searchNameInput.addEventListener('input', handleAutocomplete);
@@ -478,6 +477,24 @@ document.addEventListener('DOMContentLoaded', () => {
     setupStaticEventListeners();
 
     // --- 6. 로그인 시 실행되는 로직 ---
+    let appInitialized = false;
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            currentUser = user;
+            authView.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            if (!appInitialized) {
+                initializeApp();
+                appInitialized = true;
+            }
+        } else {
+            currentUser = null;
+            authView.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+            appInitialized = false;
+        }
+    });
+
     async function initializeApp() {
         if (!currentUser) return;
         userEmailSpan.textContent = currentUser.email;
