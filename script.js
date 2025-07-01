@@ -26,16 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // [수정] 지도 API를 동적으로 불러오는 함수 다시 추가
     function loadNaverMapsApi() {
         return new Promise((resolve, reject) => {
-            // 이미 로드된 경우 즉시 반환
             if (window.naver && window.naver.maps) {
                 return resolve();
             }
-            // 스크립트 태그가 이미 추가되었는지 확인 (중복 추가 방지)
             if (document.querySelector('script[src*="ncpKeyId=d7528qc21z"]')) {
-                // 이미 있다면 로드될 때까지 잠시 대기
                 const interval = setInterval(() => {
                     if (window.naver && window.naver.maps) {
                         clearInterval(interval);
@@ -46,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const mapScript = document.createElement('script');
             mapScript.type = 'text/javascript';
-            mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=geocoder`;
+            // [수정] submodules=geocoder -> submodules=services 로 변경
+            mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=services`;
             mapScript.onload = resolve;
             mapScript.onerror = reject;
             document.head.appendChild(mapScript);
@@ -366,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.listView.classList.add('hidden');
         ctx.detailView.classList.remove('hidden');
         
-        // [수정] 지도 그리기 전에 API 로딩을 기다리는 코드 추가
         try {
             await loadNaverMapsApi();
             drawMap(clinic.address, clinic.name);
