@@ -26,9 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // [수정] 지도 API 로딩 함수의 타이밍 문제를 완전히 해결한 최종 버전
+    // [수정] 지도 API 로딩 함수의 파라미터 이름을 ncpClientId 로 최종 수정
     function loadNaverMapsApi() {
-        // 'Service' 모듈이 준비될 때까지 확실히 기다리는 로직
         const checkReady = (resolve) => {
             const interval = setInterval(() => {
                 if (window.naver && window.naver.maps && window.naver.maps.Service) {
@@ -39,28 +38,23 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         return new Promise((resolve, reject) => {
-            // 이미 완전히 로드된 경우
             if (window.naver && window.naver.maps && window.naver.maps.Service) {
                 return resolve();
             }
 
-            const existingScript = document.querySelector('script[src*="ncpKeyId=d7528qc21z"]');
+            // Client ID가 포함된 스크립트 태그를 찾음
+            const existingScript = document.querySelector('script[src*="ncpClientId="]');
 
-            // 스크립트 태그는 있지만 아직 준비가 안 된 경우 -> 준비될 때까지 기다림
             if (existingScript) {
                 return checkReady(resolve);
             }
 
-            // 스크립트 태그가 없는 경우 -> 새로 만들고, 로드 후 준비될 때까지 기다림
             const mapScript = document.createElement('script');
             mapScript.type = 'text/javascript';
-            mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=services`;
+            // [핵심 수정] ncpKeyId -> ncpClientId
+            mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=d7528qc21z&submodules=services`;
             mapScript.onerror = reject;
-            
-            // onload가 발생하면, 즉시 resolve하지 않고 준비될 때까지 기다리는 checkReady를 호출
-            mapScript.onload = () => {
-                checkReady(resolve);
-            };
+            mapScript.onload = () => checkReady(resolve);
 
             document.head.appendChild(mapScript);
         });
