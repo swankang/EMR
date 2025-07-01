@@ -7,11 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let appInitialized = false;
     let toastTimer;
 
-    /**
-     * 화면 하단에 토스트 메시지를 표시하는 함수
-     * @param {string} message - 표시할 메시지
-     * @param {number} [duration=3000] - 표시 시간 (ms)
-     */
     function showToast(message, duration = 3000) {
         const toast = document.getElementById('toast-notification');
         if (!toast) return;
@@ -23,11 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, duration);
     }
 
-    /**
-     * 함수의 실행을 지연시켜 마지막 호출만 실행되게 하는 디바운스 함수
-     * @param {Function} func - 실행할 함수
-     * @param {number} delay - 지연 시간 (ms)
-     */
     function debounce(func, delay) {
         let timeout;
         return function(...args) {
@@ -36,9 +26,33 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    /**
-     * Firebase 인증 상태 변경을 감지하고 앱을 초기화하는 메인 로직
-     */
+    // [수정] 지도 API를 동적으로 불러오는 함수 다시 추가
+    function loadNaverMapsApi() {
+        return new Promise((resolve, reject) => {
+            // 이미 로드된 경우 즉시 반환
+            if (window.naver && window.naver.maps) {
+                return resolve();
+            }
+            // 스크립트 태그가 이미 추가되었는지 확인 (중복 추가 방지)
+            if (document.querySelector('script[src*="ncpKeyId=d7528qc21z"]')) {
+                // 이미 있다면 로드될 때까지 잠시 대기
+                const interval = setInterval(() => {
+                    if (window.naver && window.naver.maps) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 100);
+                return;
+            }
+            const mapScript = document.createElement('script');
+            mapScript.type = 'text/javascript';
+            mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=geocoder`;
+            mapScript.onload = resolve;
+            mapScript.onerror = reject;
+            document.head.appendChild(mapScript);
+        });
+    }
+
     auth.onAuthStateChanged(user => {
         const isUserLoggedIn = !!user;
         authView.classList.toggle('hidden', isUserLoggedIn);
@@ -48,13 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
             initializeApp(user);
             appInitialized = true;
         } else if (!isUserLoggedIn) {
-            appInitialized = false; // 로그아웃 시 초기화 상태로 변경
+            appInitialized = false;
         }
     });
 
-    /**
-     * 로그인 페이지의 이벤트를 설정하는 함수
-     */
     function setupLoginEvents() {
         const loginBtn = document.getElementById('login-btn');
         if (!loginBtn) return;
@@ -69,13 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 로그인 페이지 설정 실행
     setupLoginEvents();
 
-    /**
-     * 로그인 성공 후, 메인 애플리케이션을 초기화하고 실행하는 함수
-     * @param {object} user - Firebase 인증 유저 객체
-     */
     async function initializeApp(user) {
         const ctx = {
             clinicsCollection: db.collection('users').doc(user.uid).collection('clinics'),
@@ -359,7 +365,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         ctx.listView.classList.add('hidden');
         ctx.detailView.classList.remove('hidden');
-        drawMap(clinic.address, clinic.name);
+        
+        // [수정] 지도 그리기 전에 API 로딩을 기다리는 코드 추가
+        try {
+            await loadNaverMapsApi();
+            drawMap(clinic.address, clinic.name);
+        } catch (error) {
+            console.error("Naver Maps API 로딩 실패:", error);
+            showToast("지도 API 로딩에 실패했습니다.");
+        }
     }
 
     function showListView(ctx) {
