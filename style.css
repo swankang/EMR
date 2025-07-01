@@ -18,7 +18,6 @@ body {
 .auth-container p { margin-bottom: 30px; color: var(--secondary-color); }
 #login-form input { width: calc(100% - 24px); padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 16px; }
 .auth-buttons button { width: 100%; padding: 12px; font-weight: 700; background-color: var(--primary-color); color: white; border: none; }
-.auth-buttons button:hover { background-color: #2e59d9; }
 .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
 header > div { display: flex; align-items: center; gap: 10px; }
@@ -26,10 +25,10 @@ header h1 { margin: 0; display: flex; align-items: center; font-size: 24px; colo
 #total-clinic-count { font-size: 18px; color: #6c757d; font-weight: 400; margin-left: 12px; }
 .user-email { font-weight: 700; color: #3a3b45; }
 button { padding: 8px 14px; border: 1px solid transparent; border-radius: 5px; font-size: 14px; cursor: pointer; transition: all 0.2s; color: white; }
+button:hover { opacity: 0.8; }
 button#history-btn { background-color: #1cc88a; border-color: #1cc88a; }
 button#add-clinic-btn { background-color: var(--primary-color); border-color: var(--primary-color); }
 button.danger { background-color: var(--danger-color); border-color: var(--danger-color); }
-button:hover { opacity: 0.8; }
 #search-section { display: flex; gap: 10px; margin-bottom: 20px; padding: 15px; background-color: #fff; border-radius: 8px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, .15); }
 #search-section select, #search-section input { padding: 10px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 5px; }
 .search-input-wrapper { flex-grow: 1; position: relative; }
@@ -51,11 +50,12 @@ button:hover { opacity: 0.8; }
 .clinic-cards-container.no-scroll { max-height: none; overflow-y: visible; padding-right: 0; }
 .clinic-card { background-color: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; cursor: grab; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, .1); }
 .clinic-card h3 { margin: 0 0 5px; font-size: 16px; color: var(--primary-color); }
+.clinic-card p { font-size: 13px; color: var(--secondary-color); }
 #todo-section { margin-top: 40px; background-color: white; border-radius: 8px; padding: 20px 30px; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, .15); }
 .todo-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
 .todo-header button { font-size: 14px; padding: 8px 12px; }
 #todo-filter-buttons button { background-color: transparent; color: #666; border: 1px solid var(--border-color); }
-#todo-filter-buttons button.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+#todo-filter-buttons button.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color);}
 #add-todo-btn { background-color: var(--primary-color); color: white; }
 #todo-list { margin-top: 20px; }
 .todo-item { display: flex; align-items: center; gap: 15px; padding: 15px 10px; border-bottom: 1px solid #f0f0f0; }
@@ -76,6 +76,10 @@ button:hover { opacity: 0.8; }
 .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; }
 .modal-content { background-color: #fefefe; padding: 30px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 8px; position: relative; }
 .close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; }
+#clinic-form { display: flex; flex-direction: column; gap: 15px; }
+#clinic-form input, #clinic-form select, #clinic-form textarea { padding: 10px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 5px; }
+.address-group { display: flex; gap: 10px; align-items: center; }
+.address-group input { flex-grow: 1; }
 #history-content { margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 15px; text-align: left; }
 .history-version { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
 .history-version:last-child { border-bottom: none; }
