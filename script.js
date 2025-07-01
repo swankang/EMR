@@ -1,3 +1,8 @@
+const consoleStyle_title = 'color: #4e73df; font-size: 24px; font-weight: bold;';
+const consoleStyle_body = 'font-size: 14px; line-height: 1.5;';
+
+console.log('%c🏥 부산의원 관리 v2.2.0', consoleStyle_title);
+console.log('%cjust for fun \n 심심해서 만들었어유', consoleStyle_body);
 document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
