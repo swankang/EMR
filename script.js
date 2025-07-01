@@ -26,27 +26,42 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // [수정] 지도 API 로딩 함수의 타이밍 문제를 완전히 해결한 최종 버전
     function loadNaverMapsApi() {
+        // 'Service' 모듈이 준비될 때까지 확실히 기다리는 로직
+        const checkReady = (resolve) => {
+            const interval = setInterval(() => {
+                if (window.naver && window.naver.maps && window.naver.maps.Service) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, 100);
+        };
+
         return new Promise((resolve, reject) => {
-            // [수정] Service 모듈까지 완전히 로드되었는지 확인
+            // 이미 완전히 로드된 경우
             if (window.naver && window.naver.maps && window.naver.maps.Service) {
                 return resolve();
             }
-            if (document.querySelector('script[src*="ncpKeyId=d7528qc21z"]')) {
-                const interval = setInterval(() => {
-                    // [수정] 더 구체적으로 Service 모듈까지 확인
-                    if (window.naver && window.naver.maps && window.naver.maps.Service) {
-                        clearInterval(interval);
-                        resolve();
-                    }
-                }, 100);
-                return;
+
+            const existingScript = document.querySelector('script[src*="ncpKeyId=d7528qc21z"]');
+
+            // 스크립트 태그는 있지만 아직 준비가 안 된 경우 -> 준비될 때까지 기다림
+            if (existingScript) {
+                return checkReady(resolve);
             }
+
+            // 스크립트 태그가 없는 경우 -> 새로 만들고, 로드 후 준비될 때까지 기다림
             const mapScript = document.createElement('script');
             mapScript.type = 'text/javascript';
             mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=services`;
-            mapScript.onload = resolve;
             mapScript.onerror = reject;
+            
+            // onload가 발생하면, 즉시 resolve하지 않고 준비될 때까지 기다리는 checkReady를 호출
+            mapScript.onload = () => {
+                checkReady(resolve);
+            };
+
             document.head.appendChild(mapScript);
         });
     }
@@ -403,7 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawMap(address, name) {
-        // [수정] Service 모듈 존재 여부까지 확인하여 안정성 강화
         if (!window.naver || !window.naver.maps || !window.naver.maps.Service) {
             console.error("Naver Maps API or its Service module is not loaded.");
             showToast("지도 모듈 로딩에 실패했습니다. 잠시 후 다시 시도해주세요.");
