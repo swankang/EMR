@@ -1,14 +1,13 @@
 const consoleStyle_title = 'color: #4e73df; font-size: 24px; font-weight: bold;';
 const consoleStyle_body = 'font-size: 14px; line-height: 1.5;';
-
-console.log('%c🏥 부산의원 관리 v2.2.3', consoleStyle_title);
-console.log('%cjust for fun \n 심심해서 만들었어유', consoleStyle_body);
+console.log('%c🏥 부산의원 관리 Final Version', consoleStyle_title);
+console.log('%c최종 안정화 버전입니다.', consoleStyle_body);
 
 document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // 1. DOM 요소 가져오기
+    // DOM 요소
     const authView = document.getElementById('auth-view');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
@@ -16,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logout-btn');
     const addClinicBtn = document.getElementById('add-clinic-btn');
     const historyBtn = document.getElementById('history-btn');
-    const statsBtn = document.getElementById('stats-btn');
     const totalClinicCountSpan = document.getElementById('total-clinic-count');
     const dashboardView = document.getElementById('dashboard-view');
     const listView = document.getElementById('list-view');
@@ -40,10 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addTodoBtn = document.getElementById('add-todo-btn');
     const historyModal = document.getElementById('history-modal');
     const closeHistoryModalBtn = document.getElementById('close-history-modal-btn');
-    const statsModal = document.getElementById('stats-modal');
-    const closeStatsModalBtn = statsModal ? statsModal.querySelector('.close-btn') : null;
 
-    // 2. 전역 상태 변수
+    // 전역 상태
     let appInitialized = false;
     let allClinics = [];
     let allTodos = [];
@@ -55,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let clinicsCollection = null;
     let todosCollection = null;
 
-    // 3. 함수 정의
+    // 함수 정의
     function loadNaverMapsApi() {
         return new Promise((resolve, reject) => {
             if (window.naver && window.naver.maps) return resolve();
@@ -93,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateFilters() {
-        if (!searchStageSelect || !searchDepartmentSelect) return;
         searchStageSelect.innerHTML = '<option value="">-- 단계 전체 --</option>';
         searchDepartmentSelect.innerHTML = '<option value="">-- 진료과 전체 --</option>';
         const stages = ['인지', '관심', '고려', '구매'];
@@ -101,12 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
         stages.forEach(stage => {
             const option = document.createElement('option');
             option.value = stage; option.textContent = stage;
-            searchStageSelect.appendChild(option);
+            if(searchStageSelect) searchStageSelect.appendChild(option);
         });
         departments.forEach(dept => {
             const option = document.createElement('option');
             option.value = dept; option.textContent = dept;
-            searchDepartmentSelect.appendChild(option);
+            if(searchDepartmentSelect) searchDepartmentSelect.appendChild(option);
         });
     }
 
@@ -481,8 +476,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
     }
 
-    // --- 5. 앱 전체 설정 실행 ---
-    setupStaticEventListeners();
+    // --- 5. 로그인/아웃 상태 변경 감지 ---
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            currentUser = user;
+            authView.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            if (!appInitialized) {
+                initializeApp();
+                setupStaticEventListeners();
+                appInitialized = true;
+            }
+        } else {
+            currentUser = null;
+            authView.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+            appInitialized = false;
+        }
+    });
 
     // --- 6. 로그인 성공 시 데이터 로딩 및 최초 렌더링 ---
     async function initializeApp() {
