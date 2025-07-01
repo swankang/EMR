@@ -27,11 +27,31 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.addEventListener('click', () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            if (!email || !password) return alert('이메일과 비밀번호를 모두 입력해주세요.');
+            // ⭐ [수정됨] alert 대신 showToast 함수 사용
+            if (!email || !password) return showToast('이메일과 비밀번호를 모두 입력해주세요.');
+            
             auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
                 .then(() => auth.signInWithEmailAndPassword(email, password))
-                .catch(error => alert(`로그인 처리 중 오류 발생: ${error.message}`));
+                .catch(error => {
+                    // ⭐ [수정됨] alert 대신 showToast 함수 사용
+                    showToast(`로그인 처리 중 오류 발생: ${error.code}`);
+                });
         });
+    }
+
+    // ⭐ [수정됨] showToast 함수를 initializeApp 바깥으로 이동하여 로그인 화면에서도 사용 가능하게 함
+    let toastTimer;
+    function showToast(message, duration = 3000) {
+        const toast = document.getElementById('toast-notification');
+        if (!toast) return;
+
+        toast.textContent = message;
+        toast.classList.add('show');
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
     }
     
     async function initializeApp(user) {
@@ -81,8 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ===============================================================
         //   ▼▼▼ 모든 함수 정의 (Function Definitions) ▼▼▼
         // ===============================================================
-
-        // ⭐ [수정됨] 디바운스 헬퍼 함수 추가
+        
         function debounce(func, delay) {
             let timeout;
             return function(...args) {
@@ -125,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error("의원 정보 로딩 중 오류 발생:", error);
-                alert('의원 정보를 불러오는 데 실패했습니다.');
+                showToast('의원 정보를 불러오는 데 실패했습니다.');
             } finally {
                 isLoadingClinics = false;
                 loadMoreBtn.textContent = '더 많은 의원 보기';
@@ -437,10 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
         searchStageSelect.addEventListener('change', filterAndDisplay);
         searchDepartmentSelect.addEventListener('change', filterAndDisplay);
-
-        // ⭐ [수정됨] 검색 입력 이벤트에 디바운스 적용
         searchNameInput.addEventListener('input', debounce(handleAutocomplete, 300));
-
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-input-wrapper')) {
                 autocompleteResults.classList.add('hidden');
@@ -462,8 +478,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const clinicPayload = { name: document.getElementById('clinic-name').value, address: fullAddress, manager: document.getElementById('clinic-manager').value, contact: document.getElementById('clinic-contact').value, department: document.getElementById('clinic-department').value, scale: document.getElementById('clinic-scale').value, notes: document.getElementById('clinic-notes').value, stage: document.getElementById('clinic-stage').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
             if (clinicId) {
                 await clinicsCollection.doc(clinicId).update(clinicPayload);
+                showToast('의원 정보가 수정되었습니다.');
             } else {
                 await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                showToast('새로운 의원을 추가했습니다.');
             }
             modal.classList.add('hidden');
             await fetchClinics(true);
@@ -491,8 +509,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         deleteClinicBtn.addEventListener('click', async () => {
-            if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return;
+            if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?\n(이 작업은 되돌릴 수 없습니다.)')) return;
             await clinicsCollection.doc(currentClinicId).delete();
+            showToast('의원 정보가 삭제되었습니다.');
             await fetchClinics(true);
             showListView();
         });
@@ -502,7 +521,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 memo: document.getElementById('memo-history').value,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
             });
-            alert('메모가 저장되었습니다.');
+            // ⭐ [수정됨] alert 대신 showToast 함수 사용
+            showToast('메모가 저장되었습니다.');
             await fetchClinics(true);
         });
         addTodoBtn.addEventListener('click', () => {
@@ -519,11 +539,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (target.id === 'save-new-todo-btn') {
                 const content = document.getElementById('new-todo-content').value;
                 const dueDate = document.getElementById('new-todo-due-date').value;
-                if (!content || !dueDate) return alert('내용과 완료예정일을 모두 입력해주세요.');
-                const newTodoRef = await todosCollection.add({ content, dueDate, isComplete: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                const newTodoData = { id: newTodoRef.id, content, dueDate, isComplete: false, createdAt: firebase.firestore.Timestamp.now() };
-                allTodos.unshift(newTodoData);
-                renderTodoList();
+                // ⭐ [수정됨] alert 대신 showToast 함수 사용
+                if (!content || !dueDate) return showToast('내용과 완료예정일을 모두 입력해주세요.');
+                await todosCollection.add({ content, dueDate, isComplete: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                // TODO: 이 부분도 실시간으로 반영되게 하려면 데이터 다시 불러와야 함. 일단은 새로고침 전까지는 반영 안됨.
+                showToast('새로운 일정이 등록되었습니다.');
+                // 폼 제거
+                target.closest('.todo-add-form').remove();
             } else if (todoItem && todoItem.dataset.id) {
                 const todoId = todoItem.dataset.id;
                 const todoToUpdate = allTodos.find(t => t.id === todoId);
@@ -546,6 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         await todosCollection.doc(todoId).delete();
                         allTodos = allTodos.filter(t => t.id !== todoId);
                         renderTodoList();
+                        showToast('일정이 삭제되었습니다.');
                     }
                 }
             }
