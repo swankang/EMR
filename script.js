@@ -1,13 +1,14 @@
 const consoleStyle_title = 'color: #4e73df; font-size: 24px; font-weight: bold;';
 const consoleStyle_body = 'font-size: 14px; line-height: 1.5;';
-console.log('%c🏥 부산의원 관리 Final Version', consoleStyle_title);
-console.log('%c최종 안정화 버전입니다. 모든 기능이 포함되어 있습니다.', consoleStyle_body);
+
+console.log('%c🏥 부산의원 관리 v2.3.0 Final', consoleStyle_title);
+console.log('%cThis is the real final version.', consoleStyle_body);
 
 document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // 1. DOM 요소 가져오기
+    // 1. DOM 요소 가져오기 (한 번만)
     const authView = document.getElementById('auth-view');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
@@ -38,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const addTodoBtn = document.getElementById('add-todo-btn');
     const historyModal = document.getElementById('history-modal');
     const closeHistoryModalBtn = document.getElementById('close-history-modal-btn');
-    const statsSection = document.getElementById('stats-section');
 
     // 2. 전역 상태 변수
     let appInitialized = false;
@@ -95,20 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
         searchDepartmentSelect.innerHTML = '<option value="">-- 진료과 전체 --</option>';
         const stages = ['인지', '관심', '고려', '구매'];
         const departments = ['피부과', '가정의학과', '내과', '정형외과', '치과', '한의원', '정신병원'];
-        stages.forEach(stage => {
-            const option = document.createElement('option');
-            option.value = stage; option.textContent = stage;
-            searchStageSelect.appendChild(option);
-        });
-        departments.forEach(dept => {
-            const option = document.createElement('option');
-            option.value = dept; option.textContent = dept;
-            searchDepartmentSelect.appendChild(option);
-        });
+        stages.forEach(stage => { const option = document.createElement('option'); option.value = stage; option.textContent = stage; searchStageSelect.appendChild(option); });
+        departments.forEach(dept => { const option = document.createElement('option'); option.value = dept; option.textContent = dept; searchDepartmentSelect.appendChild(option); });
     }
 
     function filterAndDisplay() {
-        if (!searchStageSelect || !searchDepartmentSelect || !searchNameInput) return;
         const stage = searchStageSelect.value;
         const department = searchDepartmentSelect.value;
         const name = searchNameInput.value.toLowerCase();
@@ -122,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleAutocomplete() {
         const name = searchNameInput.value.toLowerCase();
+        if (!autocompleteResults) return;
         autocompleteResults.innerHTML = '';
         if (name.length === 0) {
             autocompleteResults.classList.add('hidden');
@@ -167,14 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
             cardsContainer.dataset.stage = stageInfo.name;
             column.appendChild(cardsContainer);
             dashboardView.appendChild(column);
-
             toggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const container = e.target.closest('.stage-column').querySelector('.clinic-cards-container');
                 container.classList.toggle('expanded');
                 e.target.textContent = container.classList.contains('expanded') ? '간단히 보기 ▲' : '더보기 ▼';
             });
-            
             new Sortable(cardsContainer, {
                 group: 'shared', animation: 150, ghostClass: 'sortable-ghost',
                 onEnd: async (evt) => {
@@ -183,9 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const newStage = evt.to.dataset.stage;
                     await clinicsCollection.doc(clinicId).update({ stage: newStage, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
                     const clinicToUpdate = allClinics.find(c => c.id === clinicId);
-                    if (clinicToUpdate) {
-                        clinicToUpdate.stage = newStage;
-                    }
+                    if (clinicToUpdate) clinicToUpdate.stage = newStage;
                     filterAndDisplay();
                 }
             });
@@ -194,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updateDashboard(clinicsToRender) {
         const clinics = clinicsToRender;
-        totalClinicCountSpan.textContent = `(총 ${allClinics.length}곳)`;
+        if (totalClinicCountSpan) totalClinicCountSpan.textContent = `(총 ${allClinics.length}곳)`;
         renderStatistics();
         document.querySelectorAll('.stage-column h2').forEach(header => {
             const stageName = header.dataset.stageName;
@@ -236,25 +224,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const existingChart = Chart.getChart(canvas);
             if (existingChart) existingChart.destroy();
         });
-        const departmentData = allClinics.reduce((acc, clinic) => {
-            const dept = clinic.department || "미지정";
-            acc[dept] = (acc[dept] || 0) + 1;
-            return acc;
-        }, {});
+        const departmentData = allClinics.reduce((acc, clinic) => { const dept = clinic.department || "미지정"; acc[dept] = (acc[dept] || 0) + 1; return acc; }, {});
         new Chart(departmentCanvas, { type: 'doughnut', data: { labels: Object.keys(departmentData), datasets: [{ data: Object.values(departmentData), backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'], hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
         const scaleOrder = ['0~5명', '6~10명', '11~15명', '16명이상'];
         const scaleCounts = Array(scaleOrder.length).fill(0);
-        allClinics.forEach(clinic => {
-            const index = scaleOrder.indexOf(clinic.scale);
-            if (index > -1) scaleCounts[index]++;
-        });
+        allClinics.forEach(clinic => { const index = scaleOrder.indexOf(clinic.scale); if (index > -1) scaleCounts[index]++; });
         new Chart(scaleCanvas, { type: 'bar', data: { labels: scaleOrder, datasets: [{ label: '의원 수', data: scaleCounts, backgroundColor: '#4e73df' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } } });
         const stageOrder = ['인지', '관심', '고려', '구매'];
         const stageCounts = Array(stageOrder.length).fill(0);
-        allClinics.forEach(clinic => {
-            const index = stageOrder.indexOf(clinic.stage);
-            if (index > -1) stageCounts[index]++;
-        });
+        allClinics.forEach(clinic => { const index = stageOrder.indexOf(clinic.stage); if (index > -1) stageCounts[index]++; });
         new Chart(stageCanvas, { type: 'bar', data: { labels: stageOrder, datasets: [{ label: '의원 수', data: stageCounts, backgroundColor: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, min: 0, ticks: { precision: 0, stepSize: 1 } } } } });
     }
     
@@ -353,22 +331,48 @@ document.addEventListener('DOMContentLoaded', () => {
     function buildHistoryHtml() {
         const historyContent = document.getElementById('history-content');
         if(!historyContent) return;
-        const historyData = [ { version: 'v2.2.3', title: '안정화 및 최종 디버깅', date: '2025년 7월 1일', features: ["<b>아키텍처 최종 수정:</b> `initializeApp` 중복 실행을 막는 `appInitialized` 플래그 로직을 복원하여 새로고침 및 재로그인 시 발생하던 모든 런타임 오류 해결.", "<b>의원 추가 로직 최적화:</b> 의원 추가/수정 시 전체 목록을 다시 불러오지 않고, 로컬 캐시를 직접 업데이트하여 반응 속도 향상 및 중복 등록 문제 해결."] }, { version: 'v2.1', title: 'UI/UX 개선 및 기능 추가', date: '2025년 6월 20일', features: ["<b>프로젝트 히스토리 조회:</b> 앱의 버전별 업데이트 내역을 확인할 수 있는 '히스토리' 팝업 기능 추가."] }, { version: 'v2.0', title: '전문가용 기능 확장', date: '2025년 6월 20일', features: ["<b>칸반 보드 UI 개선:</b> 각 단계별 목록의 카드가 5개를 초과할 경우, '더보기/간단히 보기' 버튼으로 목록을 펼치거나 접는 기능 추가.", "<b>통합 검색 기능:</b> '홍보 단계', '진료과', '의원명'의 다중 조건으로 필터링하는 검색 기능 구현.", "<b>실시간 자동완성:</b> 의원명 입력 시, 조건에 맞는 결과가 드롭다운 형태로 실시간 표시.", "<b>성능 최적화:</b> 데이터베이스 조회 로직을 개선, 앱 최초 로딩 시 모든 데이터를 '캐시'하여 이후 작업의 반응 속도를 획기적으로 향상시키고 렌더링 오류 해결."] }, { version: 'v1.2', title: '사용성 및 안정성 개선', date: '2025년 6월 중순', features: ["<b>로그인 세션 정책 변경:</b> 브라우저 종료 시 자동 로그아웃되도록 세션 유지 방식 변경.", "<b>페이지네이션 구현:</b> TO-DO LIST가 5개를 초과할 경우, 페이지 번호로 나눠 볼 수 있는 기능 추가.", "<b>TO-DO LIST 완료일 기록:</b> 할 일 완료 시, D-Day 대신 실제 완료일이 표시되도록 기능 개선."] }, { version: 'v1.1', title: '대시보드 및 편의 기능 고도화', date: '2025년 6월 중순', features: ["<b>통계 대시보드 추가:</b> Chart.js를 활용하여 진료과별, 규모별, 영업 단계별 현황 차트 구현.", "<b>TO-DO LIST 기능 구현:</b> 날짜 기반의 할 일 등록 및 관리 기능 추가.", "<b>사용자 인증 도입:</b> Firebase Authentication을 이용한 로그인/로그아웃 기능 추가."] }, { version: 'v1.0', title: '핵심 기능 완성', date: '2025년 6월 초', features: ["<b>칸반 보드 UI 도입:</b> 영업 단계를 '인지/관심/고려/구매'로 시각화.", "<b>드래그 앤 드롭 기능:</b> 의원 카드를 끌어서 영업 단계를 변경하는 기능 추가.", "<b>상세 정보 조회 및 지도 연동:</b> 의원별 상세 정보 확인 및 네이버 지도 연동.", "<b>메모 기능:</b> 각 의원별 텍스트 메모 기록 및 저장 기능 추가."] }, { version: 'v0.1', title: '초기 아이디어 및 프로토타입', date: '2025년 5월', features: ["Firebase Firestore 데이터베이스 연동.", "모달을 통한 새로운 의원 정보 추가 및 저장 기능 구현."] } ];
+        const historyData = [ { version: 'v2.2.3', title: '최종 안정화', date: '2025년 7월 1일', features: ["<b>아키텍처 최종 수정:</b> `initializeApp` 중복 실행을 막는 `appInitialized` 플래그 로직을 복원하여 새로고침 및 재로그인 시 발생하던 모든 런타임 오류 해결.", "<b>의원 추가 로직 최적화:</b> 의원 추가/수정 시 전체 목록을 다시 불러오지 않고, 로컬 캐시를 직접 업데이트하여 반응 속도 향상 및 중복 등록 문제 해결."] }, { version: 'v2.1', title: 'UI/UX 개선 및 기능 추가', date: '2025년 6월 20일', features: ["<b>프로젝트 히스토리 조회:</b> 앱의 버전별 업데이트 내역을 확인할 수 있는 '히스토리' 팝업 기능 추가."] }, { version: 'v2.0', title: '전문가용 기능 확장', date: '2025년 6월 20일', features: ["<b>칸반 보드 UI 개선:</b> 각 단계별 목록의 카드가 5개를 초과할 경우, '더보기/간단히 보기' 버튼으로 목록을 펼치거나 접는 기능 추가.", "<b>통합 검색 기능:</b> '홍보 단계', '진료과', '의원명'의 다중 조건으로 필터링하는 검색 기능 구현.", "<b>실시간 자동완성:</b> 의원명 입력 시, 조건에 맞는 결과가 드롭다운 형태로 실시간 표시.", "<b>성능 최적화:</b> 데이터베이스 조회 로직을 개선, 앱 최초 로딩 시 모든 데이터를 '캐시'하여 이후 작업의 반응 속도를 획기적으로 향상시키고 렌더링 오류 해결."] }, { version: 'v1.2', title: '사용성 및 안정성 개선', date: '2025년 6월 중순', features: ["<b>로그인 세션 정책 변경:</b> 브라우저 종료 시 자동 로그아웃되도록 세션 유지 방식 변경.", "<b>페이지네이션 구현:</b> TO-DO LIST가 5개를 초과할 경우, 페이지 번호로 나눠 볼 수 있는 기능 추가.", "<b>TO-DO LIST 완료일 기록:</b> 할 일 완료 시, D-Day 대신 실제 완료일이 표시되도록 기능 개선."] }, { version: 'v1.1', title: '대시보드 및 편의 기능 고도화', date: '2025년 6월 중순', features: ["<b>통계 대시보드 추가:</b> Chart.js를 활용하여 진료과별, 규모별, 영업 단계별 현황 차트 구현.", "<b>TO-DO LIST 기능 구현:</b> 날짜 기반의 할 일 등록 및 관리 기능 추가.", "<b>사용자 인증 도입:</b> Firebase Authentication을 이용한 로그인/로그아웃 기능 추가."] }, { version: 'v1.0', title: '핵심 기능 완성', date: '2025년 6월 초', features: ["<b>칸반 보드 UI 도입:</b> 영업 단계를 '인지/관심/고려/구매'로 시각화.", "<b>드래그 앤 드롭 기능:</b> 의원 카드를 끌어서 영업 단계를 변경하는 기능 추가.", "<b>상세 정보 조회 및 지도 연동:</b> 의원별 상세 정보 확인 및 네이버 지도 연동.", "<b>메모 기능:</b> 각 의원별 텍스트 메모 기록 및 저장 기능 추가."] }, { version: 'v0.1', title: '초기 아이디어 및 프로토타입', date: '2025년 5월', features: ["Firebase Firestore 데이터베이스 연동.", "모달을 통한 새로운 의원 정보 추가 및 저장 기능 구현."] } ];
         let html = '';
         historyData.forEach(item => { html += `<div class="history-version"><h3>${item.version} - ${item.title}</h3><p class="date">${item.date}</p><ul>${item.features.map(feature => `<li>${feature}</li>`).join('')}</ul></div>`; });
         historyContent.innerHTML = html;
     }
-    
-    // --- 4. 로그인 성공 후 앱 초기화 함수 ---
+
+    // --- 4. 로그인/아웃 및 앱 초기화 로직 ---
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            authView.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+            if (!appInitialized) {
+                initializeApp(user);
+                appInitialized = true;
+            }
+        } else {
+            appInitialized = false;
+            authView.classList.remove('hidden');
+            appContainer.classList.add('hidden');
+        }
+    });
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            if (!emailInput || !passwordInput) return;
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            if (!email || !password) return alert('이메일과 비밀번호를 모두 입력해주세요.');
+            auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+                .then(() => auth.signInWithEmailAndPassword(email, password))
+                .catch(error => { alert(`로그인 실패: ${error.message}`); });
+        });
+    }
+
     async function initializeApp(user) {
-        // 컬렉션 정의
+        currentUser = user;
         clinicsCollection = db.collection('users').doc(user.uid).collection('clinics');
         todosCollection = db.collection('users').doc(user.uid).collection('todos');
 
-        // 사용자 정보 표시
-        if (userEmailSpan) userEmailSpan.textContent = user.email;
-
-        // 이벤트 리스너 등록
+        // 이벤트 리스너 설정
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
         if (searchStageSelect) searchStageSelect.addEventListener('change', filterAndDisplay);
         if (searchDepartmentSelect) searchDepartmentSelect.addEventListener('change', filterAndDisplay);
@@ -487,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
 
         // 데이터 로딩 및 최초 렌더링
+        userEmailSpan.textContent = user.email;
         [allClinics, allTodos] = await Promise.all([
             clinicsCollection.orderBy('updatedAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
             todosCollection.orderBy('createdAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
@@ -496,5 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupDashboard();
         updateDashboard(allClinics);
         renderTodoList();
+        buildHistoryHtml();
     }
 });
