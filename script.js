@@ -7,15 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // 1. DOM 요소 가져오기
     const authView = document.getElementById('auth-view');
     const appContainer = document.getElementById('app-container');
     const loginBtn = document.getElementById('login-btn');
     
-    // 2. 전역 상태 변수
     let appInitialized = false;
 
-    // 3. 로그인 버튼 이벤트 (항상 활성화)
+    // 로그인 버튼 이벤트 (항상 활성화)
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
             const emailInput = document.getElementById('email');
@@ -24,13 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = emailInput.value;
             const password = passwordInput.value;
             if (!email || !password) return alert('이메일과 비밀번호를 모두 입력해주세요.');
+            
             auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
                 .then(() => auth.signInWithEmailAndPassword(email, password))
                 .catch(error => { alert(`로그인 실패: ${error.message}`); });
         });
     }
 
-    // 4. 인증 상태 변경 감지 (앱의 메인 컨트롤러)
+    // 인증 상태 변경 감지 (앱의 메인 컨트롤러)
     auth.onAuthStateChanged(user => {
         if (user) {
             authView.classList.add('hidden');
@@ -47,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// 5. 로그인 성공 후 모든 기능을 초기화하는 메인 함수
+// 로그인 성공 후 모든 기능을 초기화하는 메인 함수
 async function initializeApp(user, db) {
     // 컬렉션 정의
     const clinicsCollection = db.collection('users').doc(user.uid).collection('clinics');
@@ -81,7 +80,9 @@ async function initializeApp(user, db) {
     const addTodoBtn = document.getElementById('add-todo-btn');
     const historyModal = document.getElementById('history-modal');
     const closeHistoryModalBtn = document.getElementById('close-history-modal-btn');
-
+    const clinicFormSubmitBtn = document.getElementById('clinic-form-submit-btn');
+    const requiredInputs = clinicForm.querySelectorAll('.form-required');
+    
     // 앱 상태 변수
     let allClinics = [];
     let allTodos = [];
@@ -90,7 +91,7 @@ async function initializeApp(user, db) {
     let currentTodoPage = 1;
     const TODO_PAGE_SIZE = 5;
 
-    // 함수 정의
+    // 모든 함수 정의
     const loadNaverMapsApi = () => new Promise((resolve, reject) => { if (window.naver && window.naver.maps) return resolve(); const mapScript = document.createElement('script'); mapScript.type = 'text/javascript'; mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=d7528qc21z&submodules=geocoder`; mapScript.onload = resolve; mapScript.onerror = reject; document.head.appendChild(mapScript); });
     const drawMap = (address, name) => { const mapElement = document.getElementById('map'); if (!mapElement || !address) return; mapElement.innerHTML = ''; let attempts = 0; const intervalId = setInterval(() => { if (window.naver && window.naver.maps && window.naver.maps.Service) { clearInterval(intervalId); naver.maps.Service.geocode({ query: address }, (status, response) => { if (status !== naver.maps.Service.Status.OK || !response.v2.addresses || response.v2.addresses.length === 0) { mapElement.innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545;">주소의 좌표를 찾을 수 없습니다.</div>'; return; } const point = new naver.maps.Point(response.v2.addresses[0].x, response.v2.addresses[0].y); const map = new naver.maps.Map(mapElement, { center: point, zoom: 16 }); new naver.maps.Marker({ position: point, map: map, title: name }); }); return; } attempts++; if (attempts > 50) { clearInterval(intervalId); mapElement.innerHTML = '<div style="text-align:center; padding:20px; color:#dc3545;">지도 로딩에 실패했습니다.</div>'; } }, 100); };
     const populateFilters = () => { if (!searchStageSelect || !searchDepartmentSelect) return; searchStageSelect.innerHTML = '<option value="">-- 단계 전체 --</option>'; searchDepartmentSelect.innerHTML = '<option value="">-- 진료과 전체 --</option>'; const stages = ['인지', '관심', '고려', '구매']; const departments = ['피부과', '가정의학과', '내과', '정형외과', '치과', '한의원', '정신병원']; stages.forEach(stage => { const option = document.createElement('option'); option.value = stage; option.textContent = stage; searchStageSelect.appendChild(option); }); departments.forEach(dept => { const option = document.createElement('option'); option.value = dept; option.textContent = dept; searchDepartmentSelect.appendChild(option); }); };
@@ -104,17 +105,17 @@ async function initializeApp(user, db) {
     const showDetailView = async (id) => { const clinic = allClinics.find(c => c.id === id); if (!clinic) { alert("의원 정보를 찾을 수 없습니다."); return; } currentClinicId = id; document.getElementById('detail-clinic-name').textContent = clinic.name; document.getElementById('detail-address').textContent = clinic.address; document.getElementById('detail-manager').textContent = clinic.manager || '-'; document.getElementById('detail-contact').textContent = clinic.contact || '-'; document.getElementById('detail-stage').textContent = clinic.stage; document.getElementById('detail-department').textContent = clinic.department || '-'; document.getElementById('detail-scale').textContent = clinic.scale || '-'; document.getElementById('detail-notes').textContent = clinic.notes || '-'; document.getElementById('detail-updated').textContent = (clinic.updatedAt && clinic.updatedAt.toDate) ? new Date(clinic.updatedAt.toDate()).toLocaleString() : '정보 없음'; document.getElementById('memo-history').value = clinic.memo || ''; listView.classList.add('hidden'); detailView.classList.remove('hidden'); try { await loadNaverMapsApi(); drawMap(clinic.address, clinic.name); } catch (error) { console.error("Naver Maps API 로딩 실패:", error); } };
     const showListView = () => { currentClinicId = null; detailView.classList.add('hidden'); listView.classList.remove('hidden'); filterAndDisplay(); };
     const execDaumPostcode = () => { new daum.Postcode({ oncomplete: (data) => { document.getElementById('clinic-address').value = data.roadAddress; document.getElementById("clinic-address-detail").focus(); } }).open(); };
-    const buildHistoryHtml = () => { const historyContent = document.getElementById('history-content'); if(!historyContent) return; const historyData = [ { version: 'Final', title: '최종 안정화', date: '2025년 7월 1일', features: ["<b>아키텍처 최종 수정:</b> `initializeApp` 중복 실행을 막는 `appInitialized` 플래그 로직을 복원하여 새로고침 및 재로그인 시 발생하던 모든 런타임 오류 해결.", "<b>UI 복원:</b> 통계 차트 및 각종 버튼의 스타일이 잘못 표시되던 문제 수정.", "<b>의원 추가/수정 로직 최적화:</b> 불필요한 DB 재조회 로직을 제거하고 로컬 캐시를 직접 업데이트하여 반응 속도 향상 및 중복 등록 문제 해결."] } /* ... 다른 히스토리 ... */]; let html = ''; historyData.forEach(item => { html += `<div class="history-version"><h3>${item.version} - ${item.title}</h3><p class="date">${item.date}</p><ul>${item.features.map(feature => `<li>${feature}</li>`).join('')}</ul></div>`; }); historyContent.innerHTML = html; };
+    const buildHistoryHtml = () => { const historyContent = document.getElementById('history-content'); if(!historyContent) return; const historyData = [ { version: 'Final', title: '최종 안정화', date: '2025년 7월 1일', features: ["<b>아키텍처 최종 수정:</b> `initializeApp` 중복 실행을 막는 `appInitialized` 플래그 로직을 복원하여 새로고침 및 재로그인 시 발생하던 모든 런타임 오류 해결.", "<b>UI 복원:</b> 통계 차트 및 각종 버튼의 스타일이 잘못 표시되던 문제 수정.", "<b>의원 추가 로직 최적화:</b> 불필요한 DB 재조회 로직을 제거하고 로컬 캐시를 직접 업데이트하여 반응 속도 향상 및 중복 등록 문제 해결."] } /* ... 다른 히스토리 ... */]; let html = ''; historyData.forEach(item => { html += `<div class="history-version"><h3>${item.version} - ${item.title}</h3><p class="date">${item.date}</p><ul>${item.features.map(feature => `<li>${feature}</li>`).join('')}</ul></div>`; }); historyContent.innerHTML = html; };
+    const validateClinicForm = () => { let isValid = true; requiredInputs.forEach(input => { if (!input.value) isValid = false; }); clinicFormSubmitBtn.disabled = !isValid; };
 
     // 이벤트 리스너 등록
-    if (userEmailSpan) userEmailSpan.textContent = user.email;
     if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
     if (searchStageSelect) searchStageSelect.addEventListener('change', filterAndDisplay);
     if (searchDepartmentSelect) searchDepartmentSelect.addEventListener('change', filterAndDisplay);
     if (searchNameInput) searchNameInput.addEventListener('input', handleAutocomplete);
     document.addEventListener('click', (e) => { if (autocompleteResults && !e.target.closest('.search-input-wrapper')) autocompleteResults.classList.add('hidden'); });
     if (backToListBtn) backToListBtn.addEventListener('click', showListView);
-    if (addClinicBtn) addClinicBtn.addEventListener('click', () => { if(clinicForm) clinicForm.reset(); if(modalTitle) modalTitle.textContent = '의원 정보 입력'; if(clinicModal) clinicModal.classList.remove('hidden'); });
+    if (addClinicBtn) addClinicBtn.addEventListener('click', () => { if(clinicForm) clinicForm.reset(); if(modalTitle) modalTitle.textContent = '의원 정보 입력'; validateClinicForm(); if(clinicModal) clinicModal.classList.remove('hidden'); });
     if (closeModalBtn) closeModalBtn.addEventListener('click', () => clinicModal.classList.add('hidden'));
     if (clinicModal) clinicModal.addEventListener('click', (e) => { if (e.target === clinicModal) e.target.classList.add('hidden'); });
     if (searchAddressBtn) searchAddressBtn.addEventListener('click', execDaumPostcode);
@@ -136,7 +137,7 @@ async function initializeApp(user, db) {
         clinicModal.classList.add('hidden');
         filterAndDisplay();
     });
-    if (editClinicBtn) editClinicBtn.addEventListener('click', () => { if (!currentClinicId) return; const clinic = allClinics.find(c => c.id === currentClinicId); if (clinic) { modalTitle.textContent = '의원 정보 수정'; document.getElementById('clinic-id').value = clinic.id; document.getElementById('clinic-name').value = clinic.name; const addressParts = clinic.address.split(','); document.getElementById('clinic-address').value = addressParts[0].trim(); document.getElementById('clinic-address-detail').value = addressParts.length > 1 ? addressParts.slice(1).join(',').trim() : ''; document.getElementById('clinic-manager').value = clinic.manager; document.getElementById('clinic-contact').value = clinic.contact; document.getElementById('clinic-department').value = clinic.department; document.getElementById('clinic-scale').value = clinic.scale; document.getElementById('clinic-notes').value = clinic.notes; document.getElementById('clinic-stage').value = clinic.stage; clinicModal.classList.remove('hidden'); } });
+    if (editClinicBtn) editClinicBtn.addEventListener('click', () => { if (!currentClinicId) return; const clinic = allClinics.find(c => c.id === currentClinicId); if (clinic) { modalTitle.textContent = '의원 정보 수정'; document.getElementById('clinic-id').value = clinic.id; document.getElementById('clinic-name').value = clinic.name; const addressParts = clinic.address.split(','); document.getElementById('clinic-address').value = addressParts[0].trim(); document.getElementById('clinic-address-detail').value = addressParts.length > 1 ? addressParts.slice(1).join(',').trim() : ''; document.getElementById('clinic-manager').value = clinic.manager; document.getElementById('clinic-contact').value = clinic.contact; document.getElementById('clinic-department').value = clinic.department; document.getElementById('clinic-scale').value = clinic.scale; document.getElementById('clinic-notes').value = clinic.notes; document.getElementById('clinic-stage').value = clinic.stage; validateClinicForm(); clinicModal.classList.remove('hidden'); } });
     if (deleteClinicBtn) deleteClinicBtn.addEventListener('click', async () => { if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return; await clinicsCollection.doc(currentClinicId).delete(); allClinics = allClinics.filter(c => c.id !== currentClinicId); showListView(); });
     if (saveMemoBtn) saveMemoBtn.addEventListener('click', async () => { if (!currentClinicId) return; await clinicsCollection.doc(currentClinicId).update({ memo: document.getElementById('memo-history').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }); alert('메모가 저장되었습니다.'); });
     if (addTodoBtn) addTodoBtn.addEventListener('click', () => { if (document.querySelector('.todo-add-form')) return; const formItem = document.createElement('div'); formItem.className = 'todo-item todo-add-form'; formItem.innerHTML = `<input type="text" id="new-todo-content" placeholder="새로운 할 일 내용 입력" required><input type="date" id="new-todo-due-date" required><div class="todo-actions" style="opacity:1;"><button id="save-new-todo-btn">저장</button></div>`; todoListContainer.prepend(formItem); document.getElementById('new-todo-content').focus(); });
@@ -144,9 +145,11 @@ async function initializeApp(user, db) {
     if (filterButtons) filterButtons.addEventListener('click', (e) => { if (e.target.tagName === 'BUTTON') { currentTodoFilter = e.target.dataset.filter; currentTodoPage = 1; document.querySelectorAll('#todo-filter-buttons .filter-btn').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); renderTodoList(); } });
     if (historyBtn) historyBtn.addEventListener('click', () => { buildHistoryHtml(); if(historyModal) historyModal.classList.remove('hidden'); });
     if (closeHistoryModalBtn) closeHistoryModalBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
-    if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
-    
+    if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) e.target.classList.add('hidden'); });
+    if (requiredInputs) requiredInputs.forEach(input => input.addEventListener('input', validateClinicForm));
+
     // 데이터 로딩 및 최초 렌더링
+    userEmailSpan.textContent = user.email;
     [allClinics, allTodos] = await Promise.all([
         clinicsCollection.orderBy('updatedAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
         todosCollection.orderBy('createdAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))

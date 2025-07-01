@@ -18,6 +18,7 @@ body {
 .auth-container p { margin-bottom: 30px; color: var(--secondary-color); }
 #login-form input { width: calc(100% - 24px); padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 16px; }
 .auth-buttons button { width: 100%; padding: 12px; font-weight: 700; background-color: var(--primary-color); color: white; border: none; }
+.auth-buttons button:hover { background-color: #2e59d9; }
 .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
 header > div { display: flex; align-items: center; gap: 10px; }
@@ -26,6 +27,7 @@ header h1 { margin: 0; display: flex; align-items: center; font-size: 24px; colo
 .user-email { font-weight: 700; color: #3a3b45; }
 button { padding: 8px 14px; border: 1px solid transparent; border-radius: 5px; font-size: 14px; cursor: pointer; transition: all 0.2s; color: white; }
 button:hover { opacity: 0.8; }
+button:disabled { background-color: #e9ecef !important; border-color: #e9ecef !important; color: #b7b9cc !important; cursor: not-allowed; }
 button#history-btn { background-color: #1cc88a; border-color: #1cc88a; }
 button#add-clinic-btn { background-color: var(--primary-color); border-color: var(--primary-color); }
 button.danger { background-color: var(--danger-color); border-color: var(--danger-color); }
@@ -80,6 +82,7 @@ button.danger { background-color: var(--danger-color); border-color: var(--dange
 #clinic-form input, #clinic-form select, #clinic-form textarea { padding: 10px; font-size: 16px; border: 1px solid var(--border-color); border-radius: 5px; }
 .address-group { display: flex; gap: 10px; align-items: center; }
 .address-group input { flex-grow: 1; }
+#search-address-btn { background-color: var(--primary-color); border-color: var(--primary-color); }
 #history-content { margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 15px; text-align: left; }
 .history-version { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
 .history-version:last-child { border-bottom: none; }
