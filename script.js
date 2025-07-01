@@ -63,8 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalTodoCountSpan = document.getElementById('total-todo-count');
         const filterButtons = document.getElementById('todo-filter-buttons');
         const addTodoBtn = document.getElementById('add-todo-btn');
-        const loadMoreBtn = document.getElementById('load-more-clinics-btn'); // ⭐ [수정됨] 더보기 버튼 추가
-        const loadMoreContainer = document.getElementById('load-more-container'); // ⭐ [수정됨] 더보기 컨테이너 추가
+        const loadMoreBtn = document.getElementById('load-more-clinics-btn');
+        const loadMoreContainer = document.getElementById('load-more-container');
 
         // --- 전역 변수 ---
         let allClinics = [];
@@ -73,18 +73,24 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentTodoFilter = 'all';
         let currentTodoPage = 1;
         const TODO_PAGE_SIZE = 5;
-
-        // ⭐ [수정됨] 페이지네이션 관련 변수 추가
-        let lastVisibleClinic = null; // 마지막으로 불러온 의원 데이터 추적용
-        let isLoadingClinics = false; // 데이터 로딩 중복 방지용
-        const CLINIC_PAGE_SIZE = 20; // 한 번에 불러올 의원 수
-        let totalClinicsInDB = 0; // DB에 있는 전체 의원 수
+        let lastVisibleClinic = null;
+        let isLoadingClinics = false;
+        const CLINIC_PAGE_SIZE = 20;
+        let totalClinicsInDB = 0;
 
         // ===============================================================
         //   ▼▼▼ 모든 함수 정의 (Function Definitions) ▼▼▼
         // ===============================================================
 
-        // ⭐ [수정됨] 의원 데이터를 페이지 단위로 불러오는 함수
+        // ⭐ [수정됨] 디바운스 헬퍼 함수 추가
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
         async function fetchClinics(isInitialLoad = false) {
             if (isLoadingClinics) return;
             isLoadingClinics = true;
@@ -93,11 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let query = clinicsCollection.orderBy('updatedAt', 'desc').limit(CLINIC_PAGE_SIZE);
 
             if (isInitialLoad) {
-                // 처음 로드할 때 전체 의원 수 한번만 가져오기
                 const countSnapshot = await clinicsCollection.get();
                 totalClinicsInDB = countSnapshot.size;
             } else if (lastVisibleClinic) {
-                // 더보기 클릭 시
                 query = query.startAfter(lastVisibleClinic);
             }
 
@@ -108,14 +112,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isInitialLoad) {
                     allClinics = newClinics;
                 } else {
-                    allClinics.push(...newClinics); // 기존 목록에 새 목록 추가
+                    allClinics.push(...newClinics);
                 }
 
                 lastVisibleClinic = snapshot.docs[snapshot.docs.length - 1];
-                filterAndDisplay(); // 화면 업데이트
+                filterAndDisplay();
 
                 if (!lastVisibleClinic || allClinics.length >= totalClinicsInDB) {
-                    loadMoreContainer.classList.add('hidden'); // 더 불러올 데이터 없으면 버튼 숨김
+                    loadMoreContainer.classList.add('hidden');
                 } else {
                     loadMoreContainer.classList.remove('hidden');
                 }
@@ -165,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function populateFilters() {
+            searchStageSelect.innerHTML = '<option value="">-- 단계 전체 --</option>';
+            searchDepartmentSelect.innerHTML = '<option value="">-- 진료과 전체 --</option>';
             const stages = ['인지', '관심', '고려', '구매'];
             const departments = ['피부과', '가정의학과', '내과', '정형외과', '치과', '한의원', '정신병원'];
             stages.forEach(stage => {
@@ -189,11 +195,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (name) filtered = filtered.filter(clinic => clinic.name.toLowerCase().includes(name));
             updateDashboard(filtered);
             
-            // 이름으로 검색할 때는 '더보기' 버튼 숨기기
-            if (name) {
+            if (name || stage || department) {
                 loadMoreContainer.classList.add('hidden');
             } else if (lastVisibleClinic && allClinics.length < totalClinicsInDB) {
                 loadMoreContainer.classList.remove('hidden');
+            } else {
+                loadMoreContainer.classList.add('hidden');
             }
             
             return filtered;
@@ -257,8 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         const clinicId = evt.item.dataset.id;
                         const newStage = evt.to.dataset.stage;
                         await clinicsCollection.doc(clinicId).update({ stage: newStage, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-                        
-                        // ⭐ [수정됨] 전체 리스트 다시 불러오기
                         await fetchClinics(true);
                     }
                 });
@@ -267,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function updateDashboard(clinicsToRender) {
             const clinics = clinicsToRender;
-            totalClinicCountSpan.textContent = `(총 ${totalClinicsInDB}곳)`; // 전체 DB 기준으로 표시
+            totalClinicCountSpan.textContent = `(총 ${totalClinicsInDB}곳)`;
             document.querySelectorAll('.stage-column h2').forEach(header => {
                 const stageName = header.dataset.stageName;
                 const stageClinics = clinics.filter(c => c.stage === stageName);
@@ -297,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     container.appendChild(card);
                 }
             });
-            renderStatistics(allClinics); // 통계는 현재 로드된 모든 의원 기준으로
+            renderStatistics(allClinics);
         }
 
         async function renderStatistics(clinics) {
@@ -392,7 +397,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function showDetailView(id) {
-            // ⭐ [수정됨] 로컬 데이터 우선 사용, 없으면 DB에서 조회
             let clinic = allClinics.find(c => c.id === id);
             if (!clinic) {
                 const doc = await clinicsCollection.doc(id).get();
@@ -433,7 +437,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
         searchStageSelect.addEventListener('change', filterAndDisplay);
         searchDepartmentSelect.addEventListener('change', filterAndDisplay);
-        searchNameInput.addEventListener('input', handleAutocomplete);
+
+        // ⭐ [수정됨] 검색 입력 이벤트에 디바운스 적용
+        searchNameInput.addEventListener('input', debounce(handleAutocomplete, 300));
+
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-input-wrapper')) {
                 autocompleteResults.classList.add('hidden');
@@ -459,8 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
             }
             modal.classList.add('hidden');
-            
-            // ⭐ [수정됨] 데이터 변경 후, 처음부터 다시 로드하여 최신 상태 반영
             await fetchClinics(true);
             if(!detailView.classList.contains('hidden') && clinicId) await showDetailView(clinicId);
         });
@@ -488,8 +493,6 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return;
             await clinicsCollection.doc(currentClinicId).delete();
-
-            // ⭐ [수정됨] 데이터 변경 후, 처음부터 다시 로드하여 최신 상태 반영
             await fetchClinics(true);
             showListView();
         });
@@ -500,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
             });
             alert('메모가 저장되었습니다.');
-            await fetchClinics(true); // 메모 저장도 업데이트이므로 목록 다시 로드
+            await fetchClinics(true);
         });
         addTodoBtn.addEventListener('click', () => {
             if (document.querySelector('.todo-add-form')) return;
@@ -556,14 +559,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderTodoList();
             }
         });
-        loadMoreBtn.addEventListener('click', () => fetchClinics(false)); // ⭐ [수정됨] 더보기 버튼 이벤트 리스너
+        loadMoreBtn.addEventListener('click', () => fetchClinics(false));
 
         // ===============================================================
         //   ▼▼▼ 앱 초기화 (App Initialization) ▼▼▼
         // ===============================================================
-
-        // ⭐ [수정됨] 초기 데이터 로딩 방식 변경
-        await fetchClinics(true); // 의원 목록 첫 페이지 로드
+        await fetchClinics(true);
         allTodos = await todosCollection.orderBy('createdAt', 'desc').get().then(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         
         populateFilters();
