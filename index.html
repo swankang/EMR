@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>부산의원 관리 Final</title>
+    <title>부산의원 관리 ver.2.0.0</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -28,28 +28,31 @@
     <div class="container hidden" id="app-container">
         <div id="list-view">
             <header>
-                <h1>부산의원 관리 <span id="total-clinic-count"></span></h1>
+                <h1>현황 대시보드 <span id="total-clinic-count"></span></h1>
                 <div>
                     <span id="user-email" class="user-email"></span>
-                    <button id="history-btn">히스토리</button>
                     <button id="add-clinic-btn">의원 추가</button>
                     <button id="logout-btn" class="danger">로그아웃</button>
                 </div>
             </header>
 
             <section id="search-section">
-                <select id="search-stage"><option value="">-- 단계 전체 --</option></select>
-                <select id="search-department"><option value="">-- 진료과 전체 --</option></select>
+                <select id="search-stage">
+                    <option value="">-- 단계 전체 --</option>
+                </select>
+                <select id="search-department">
+                    <option value="">-- 진료과 전체 --</option>
+                </select>
                 <div class="search-input-wrapper">
                     <input type="text" id="search-name" placeholder="의원명으로 검색..." autocomplete="off">
                     <div id="autocomplete-results" class="hidden"></div>
                 </div>
             </section>
-
+            
             <section id="stats-section">
                 <div class="stat-card"><h3>진료과별 분포</h3><div class="chart-container"><canvas id="department-chart"></canvas></div></div>
                 <div class="stat-card"><h3>규모별 분포</h3><div class="chart-container"><canvas id="scale-chart"></canvas></div></div>
-                <div class="stat-card"><h3>영업 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
+                <div class="stat-card"><h3>홍보 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
             </section>
             
             <main id="dashboard-view"></main>
@@ -82,35 +85,70 @@
             </header>
             <main>
                 <div class="detail-content">
-                    <div class="info-section"><h2>기본 정보</h2><p><strong>주소:</strong> <span id="detail-address"></span></p><p><strong>담당자:</strong> <span id="detail-manager"></span></p><p><strong>연락처:</strong> <span id="detail-contact"></span></p><p><strong>홍보 단계:</strong> <span id="detail-stage"></span></p><p><strong>진료과:</strong> <span id="detail-department"></span></p><p><strong>규모:</strong> <span id="detail-scale"></span></p><p><strong>특이사항:</strong> <span id="detail-notes"></span></p><p><strong>최종 업데이트:</strong> <span id="detail-updated"></span></p></div>
-                    <div class="map-section"><h2>위치</h2><div id="map"></div></div>
+                    <div class="info-section">
+                        <h2>기본 정보</h2>
+                        <p><strong>주소:</strong> <span id="detail-address"></span></p>
+                        <p><strong>담당자:</strong> <span id="detail-manager"></span></p>
+                        <p><strong>연락처:</strong> <span id="detail-contact"></span></p>
+                        <p><strong>홍보 단계:</strong> <span id="detail-stage"></span></p>
+                        <p><strong>진료과:</strong> <span id="detail-department"></span></p>
+                        <p><strong>규모:</strong> <span id="detail-scale"></span></p>
+                        <p><strong>특이사항:</strong> <span id="detail-notes"></span></p>
+                        <p><strong>최종 업데이트:</strong> <span id="detail-updated"></span></p>
+                    </div>
+                    <div class="map-section">
+                        <h2>위치</h2>
+                        <div id="map"></div>
+                    </div>
                 </div>
-                <div class="memo-section"><h2>메모 이력</h2><textarea id="memo-history" rows="10" placeholder="상담 내용, 특이사항 등을 기록하세요..."></textarea><button id="save-memo-btn">메모 저장</button></div>
+                <div class="memo-section">
+                    <h2>메모 이력</h2>
+                    <textarea id="memo-history" rows="10" placeholder="상담 내용, 특이사항 등을 기록하세요..."></textarea>
+                    <button id="save-memo-btn">메모 저장</button>
+                </div>
             </main>
         </div>
     
         <div id="clinic-modal" class="modal hidden">
             <div class="modal-content">
-                <span class="close-btn" id="close-clinic-modal-btn">&times;</span>
+                <span class="close-btn">&times;</span>
                 <h2 id="modal-title">의원 정보 입력</h2>
                 <form id="clinic-form">
-                    <input type="hidden" id="clinic-id"><input type="text" class="form-required" id="clinic-name" placeholder="의원명" required>
-                    <div class="address-group"><input type="text" class="form-required" id="clinic-address" placeholder="주소 검색 버튼을 눌러주세요" readonly required><button type="button" id="search-address-btn">주소 검색</button></div>
-                    <input type="text" id="clinic-address-detail" placeholder="상세주소 (예: 3층, 301호)"><input type="text" id="clinic-manager" placeholder="담당자"><input type="text" id="clinic-contact" placeholder="연락처">
-                    <select id="clinic-department" class="form-required" required><option value="" disabled selected>-- 진료과 선택 --</option><option value="피부과">피부과</option><option value="가정의학과">가정의학과</option><option value="내과">내과</option><option value="정형외과">정형외과</option><option value="치과">치과</option><option value="한의원">한의원</option><option value="정신병원">정신병원</option></select>
-                    <select id="clinic-scale" class="form-required" required><option value="" disabled selected>-- 규모 선택 --</option><option value="0~5명">0~5명</option><option value="6~10명">6~10명</option><option value="11~15명">11~15명</option><option value="16명이상">16명이상</option></select>
+                    <input type="hidden" id="clinic-id">
+                    <input type="text" id="clinic-name" placeholder="의원명" required>
+                    <div class="address-group">
+                        <input type="text" id="clinic-address" placeholder="주소 검색 버튼을 눌러주세요" readonly required>
+                        <button type="button" id="search-address-btn">주소 검색</button>
+                    </div>
+                    <input type="text" id="clinic-address-detail" placeholder="상세주소 (예: 3층, 301호)">
+                    <input type="text" id="clinic-manager" placeholder="담당자">
+                    <input type="text" id="clinic-contact" placeholder="연락처">
+                    <select id="clinic-department" required>
+                        <option value="" disabled selected>-- 진료과 선택 --</option>
+                        <option value="피부과">피부과</option>
+                        <option value="가정의학과">가정의학과</option>
+                        <option value="내과">내과</option>
+                        <option value="정형외과">정형외과</option>
+                        <option value="치과">치과</option>
+                        <option value="한의원">한의원</option>
+                        <option value="정신병원">정신병원</option>
+                    </select>
+                    <select id="clinic-scale" required>
+                        <option value="" disabled selected>-- 규모 선택 --</option>
+                        <option value="0~5명">0~5명</option>
+                        <option value="6~10명">6~10명</option>
+                        <option value="11~15명">11~15명</option>
+                        <option value="16명이상">16명이상</option>
+                    </select>
                     <textarea id="clinic-notes" placeholder="특이사항 입력 (예: 원장님 성향, 기존 사용 장비 등)" rows="3"></textarea>
-                    <select id="clinic-stage" class="form-required" required><option value="인지">인지</option><option value="관심">관심</option><option value="고려">고려</option><option value="구매">구매</option></select>
-                    <button type="submit" id="clinic-form-submit-btn" disabled>저장</button>
+                    <select id="clinic-stage" required>
+                        <option value="인지">인지</option>
+                        <option value="관심">관심</option>
+                        <option value="고려">고려</option>
+                        <option value="구매">구매</option>
+                    </select>
+                    <button type="submit">저장</button>
                 </form>
-            </div>
-        </div>
-
-        <div id="history-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-btn" id="close-history-modal-btn">&times;</span>
-                <h2>프로젝트 히스토리</h2>
-                <div id="history-content"></div>
             </div>
         </div>
     </div>
