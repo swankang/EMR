@@ -47,7 +47,7 @@ function loadNaverMapsApi() {
 
         const mapScript = document.createElement('script');
         mapScript.type = 'text/javascript';
-        mapScript.src = 'https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=d7528qc21z&submodules=services';
+        mapScript.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=d7528qc21z&submodules=services';
         mapScript.onerror = reject;
         mapScript.onload = () => checkReady(resolve);
 
