@@ -55,7 +55,8 @@ button:hover { opacity: 0.8; }
 .todo-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); }
 .todo-header button { font-size: 14px; padding: 8px 12px; }
 #todo-filter-buttons button { background-color: transparent; color: #666; border: 1px solid var(--border-color); }
-#todo-filter-buttons button.active { background-color: var(--primary-color); color: white; }
+#todo-filter-buttons button.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+#add-todo-btn { background-color: var(--primary-color); color: white; }
 #todo-list { margin-top: 20px; }
 .todo-item { display: flex; align-items: center; gap: 15px; padding: 15px 10px; border-bottom: 1px solid #f0f0f0; }
 .todo-content { flex: 1; }
@@ -70,8 +71,8 @@ button:hover { opacity: 0.8; }
 .pagination-btn { width: 35px; height: 35px; padding: 0; font-weight: bold; background-color: white; color: var(--primary-color); border: 1px solid var(--border-color); }
 .pagination-btn.active { background-color: var(--primary-color); color: white; }
 #detail-view header > div { display: flex; align-items: center; gap: 10px; }
-#detail-view #back-to-list-btn { background-color: var(--secondary-color); border-color: var(--secondary-color); }
-#detail-view #edit-clinic-btn { background-color: var(--primary-color); border-color: var(--primary-color); }
+#detail-view #back-to-list-btn { background-color: var(--secondary-color); border-color: var(--secondary-color); color: white; }
+#detail-view #edit-clinic-btn { background-color: var(--primary-color); border-color: var(--primary-color); color: white; }
 .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; }
 .modal-content { background-color: #fefefe; padding: 30px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 8px; position: relative; }
 .close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; }
