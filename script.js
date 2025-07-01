@@ -480,6 +480,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
     }
 
+
+ if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            if (!email || !password) return alert('이메일과 비밀번호를 모두 입력해주세요.');
+            
+            auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+                .then(() => {
+                    return auth.signInWithEmailAndPassword(email, password);
+                })
+                .catch(error => {
+                    alert(`로그인 처리 중 오류 발생: ${error.message}`);
+                });
+        });
+    }
+
+
     // --- 5. 로그인/아웃 상태 변경 및 앱 초기화 실행 ---
     auth.onAuthStateChanged(user => {
         if (user) {
