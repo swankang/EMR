@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const mapScript = document.createElement('script');
             mapScript.type = 'text/javascript';
             // [핵심 수정] ncpKeyId -> ncpClientId
-            mapScript.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=d7528qc21z&submodules=services`;
+            mapScript.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=d7528qc21z&submodules=services`;
             mapScript.onerror = reject;
             mapScript.onload = () => checkReady(resolve);
 
