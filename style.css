@@ -275,7 +275,7 @@ button.danger:hover {
 #map {
     flex-grow: 1;
     width: 100%;
-    min-height: 400px;
+    height: 400px; /* min-height를 고정 height로 변경 */
     background-color: #eee;
     border-radius: 5px;
 }
