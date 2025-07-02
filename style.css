@@ -275,7 +275,7 @@ button.danger:hover {
 #map {
     flex-grow: 1;
     width: 100%;
-    height: 400px; /* min-height를 고정 height로 변경 */
+    min-height: 400px;
     background-color: #eee;
     border-radius: 5px;
 }
@@ -303,7 +303,9 @@ button.danger:hover {
 }
 
 .modal {
-    position: fixed;
+/* ⭐===== 토스트 알림 스타일 (신규 추가) =====⭐ */
+#toast-notification {
+position: fixed;
     z-index: 1000;
     left: 0;
     top: 0;
@@ -407,7 +409,12 @@ button.danger:hover {
 
 #todo-filter-buttons button.active {
     background-color: var(--primary-color);
-    color: #fff;
+    bottom: -100px; /* 초기 위치는 화면 아래 */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px;
+    background-color: rgba(0, 0, 0, 0.75);
+color: #fff;
     border-color: var(--primary-color);
 }
 
@@ -451,12 +458,20 @@ button.danger:hover {
 .todo-actions {
     width: 100px;
     text-align: right;
-    opacity: 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 2000;
+opacity: 0;
     transition: opacity .2s;
+    font-weight: 600;
+    transition: bottom 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    text-align: center;
 }
 
 .todo-item:hover .todo-actions {
-    opacity: 1;
+#toast-notification.show {
+    bottom: 30px; /* 최종 위치 */
+opacity: 1;
 }
 
 .todo-actions button {
@@ -636,27 +651,4 @@ button.danger:hover {
     max-height: none;
     overflow-y: visible;
     padding-right: 0;
-}
-
-/* ⭐===== 토스트 알림 스타일 (신규 추가) =====⭐ */
-#toast-notification {
-    position: fixed;
-    bottom: -100px; /* 초기 위치는 화면 아래 */
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 25px;
-    background-color: rgba(0, 0, 0, 0.75);
-    color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    z-index: 2000;
-    opacity: 0;
-    font-weight: 600;
-    transition: bottom 0.5s ease-in-out, opacity 0.5s ease-in-out;
-    text-align: center;
-}
-
-#toast-notification.show {
-    bottom: 30px; /* 최종 위치 */
-    opacity: 1;
 }
