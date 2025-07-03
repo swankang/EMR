@@ -54,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const backToListBtn = document.getElementById('back-to-list-btn');
         const editClinicBtn = document.getElementById('edit-clinic-btn');
         const deleteClinicBtn = document.getElementById('delete-clinic-btn');
-        const saveMemoBtn = document.getElementById('save-memo-btn');
         const searchStageSelect = document.getElementById('search-stage');
         const searchDepartmentSelect = document.getElementById('search-department');
         const searchNameInput = document.getElementById('search-name');
@@ -75,12 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 이벤트 핸들러 초기화 ---
         if (userEmailSpan) userEmailSpan.textContent = user.email;
         if (logoutBtn) logoutBtn.addEventListener('click', () => auth.signOut());
-                // ⭐ --- 검색 이벤트 리스너 (누락된 부분) --- ⭐
+        
         searchStageSelect.addEventListener('change', filterAndDisplay);
         searchDepartmentSelect.addEventListener('change', filterAndDisplay);
         searchNameInput.addEventListener('input', handleAutocomplete);
         
-        // 검색창 외부 클릭 시 자동완성 결과 숨기기
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-input-wrapper')) {
                 autocompleteResults.classList.add('hidden');
@@ -349,11 +347,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // ✨ ----- 활동 이력 렌더링 함수 (신규 추가) ----- ✨
+        function renderActivityHistory(activities) {
+            const historyListContainer = document.getElementById('activity-history-list');
+            if (!historyListContainer) return;
+        
+            historyListContainer.innerHTML = ''; // 기존 목록 초기화
+        
+            if (activities.length === 0) {
+                historyListContainer.innerHTML = '<p class="no-history" style="text-align:center; color:#888; padding: 20px 0;">아직 등록된 활동 이력이 없습니다.</p>';
+                return;
+            }
+        
+            activities.forEach(activity => {
+                const item = document.createElement('div');
+                // CSS를 위한 클래스 추가 (style.css에서 꾸밀 수 있음)
+                item.className = 'history-item'; 
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.padding = '10px';
+                item.style.borderBottom = '1px solid #eee';
+
+                const content = document.createElement('span');
+                content.className = 'history-content';
+                content.textContent = activity.content;
+        
+                const date = document.createElement('span');
+                date.className = 'history-date';
+                date.style.color = '#888';
+                date.style.fontSize = '14px';
+                // Firestore Timestamp를 'YYYY-MM-DD' 형식의 날짜 문자열로 변환
+                date.textContent = new Date(activity.createdAt.toDate()).toISOString().split('T')[0];
+                
+                item.appendChild(content);
+                item.appendChild(date);
+                historyListContainer.appendChild(item);
+            });
+        }
+
+        // ✨ ----- 상세 보기 함수 수정 ----- ✨
         async function showDetailView(id) {
             const doc = await clinicsCollection.doc(id).get();
             if (!doc.exists) return;
             const clinic = { id: doc.id, ...doc.data() };
             currentClinicId = id;
+
             document.getElementById('detail-clinic-name').textContent = clinic.name;
             document.getElementById('detail-address').textContent = clinic.address;
             document.getElementById('detail-manager').textContent = clinic.manager || '-';
@@ -363,7 +401,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('detail-scale').textContent = clinic.scale || '-';
             document.getElementById('detail-notes').textContent = clinic.notes || '-';
             document.getElementById('detail-updated').textContent = (clinic.updatedAt && clinic.updatedAt.toDate) ? new Date(clinic.updatedAt.toDate()).toLocaleString() : '정보 없음';
-            document.getElementById('memo-history').value = clinic.memo || '';
+            
+            // ⛔️ 기존 메모 관련 코드 삭제됨
+
+            // ✨ 활동 이력(activities) 데이터 가져오기 (수정/추가된 부분) ✨
+            const activitiesSnapshot = await clinicsCollection.doc(id).collection('activities')
+                                            .orderBy('createdAt', 'desc') // 최신순으로 정렬
+                                            .get();
+            
+            const activities = activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // ✨ 가져온 활동 이력을 화면에 렌더링 ✨
+            renderActivityHistory(activities);
+            
             listView.classList.add('hidden');
             detailView.classList.remove('hidden');
             try {
@@ -388,18 +438,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('clinic-id').value = '';
             modal.classList.remove('hidden');
         });
+
         closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
         modal.addEventListener('click', (e) => { if (e.target === modal) e.target.classList.add('hidden'); });
         searchAddressBtn.addEventListener('click', execDaumPostcode);
+
         clinicForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const clinicId = document.getElementById('clinic-id').value;
             const fullAddress = `${document.getElementById('clinic-address').value}, ${document.getElementById('clinic-address-detail').value}`;
             const clinicPayload = { name: document.getElementById('clinic-name').value, address: fullAddress, manager: document.getElementById('clinic-manager').value, contact: document.getElementById('clinic-contact').value, department: document.getElementById('clinic-department').value, scale: document.getElementById('clinic-scale').value, notes: document.getElementById('clinic-notes').value, stage: document.getElementById('clinic-stage').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+            
             if (clinicId) {
                 await clinicsCollection.doc(clinicId).update(clinicPayload);
             } else {
-                const newDocRef = await clinicsCollection.add({ ...clinicPayload, memo: '', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                // 새 의원 추가 시에는 memo 필드를 넣지 않음
+                const newDocRef = await clinicsCollection.add({ ...clinicPayload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                 clinicPayload.id = newDocRef.id;
             }
             modal.classList.add('hidden');
@@ -407,7 +461,9 @@ document.addEventListener('DOMContentLoaded', () => {
             filterAndDisplay();
             if(!detailView.classList.contains('hidden')) await showDetailView(clinicId);
         });
+
         backToListBtn.addEventListener('click', showListView);
+
         editClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId) return;
             const doc = await clinicsCollection.doc(currentClinicId).get();
@@ -428,20 +484,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 modal.classList.remove('hidden');
             }
         });
+
         deleteClinicBtn.addEventListener('click', async () => {
-            if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까?')) return;
+            if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까? 관련 활동 이력도 모두 삭제됩니다.')) return;
+            // TODO: 서브컬렉션의 문서를 삭제하는 로직은 복잡하므로 일단 보류 (혹은 Cloud Function 사용)
             await clinicsCollection.doc(currentClinicId).delete();
             allClinics = allClinics.filter(c => c.id !== currentClinicId);
             showListView();
         });
-        saveMemoBtn.addEventListener('click', async () => {
-            if (!currentClinicId) return;
-            await clinicsCollection.doc(currentClinicId).update({ 
-                memo: document.getElementById('memo-history').value,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
+
+        // ⛔️ 기존 메모 저장 버튼 이벤트 리스너 삭제됨
+
+        // ✨ ----- 새로운 활동 이력 저장 로직 (신규 추가) ----- ✨
+        const newActivityContentInput = document.getElementById('new-activity-content');
+        const saveActivityBtn = document.getElementById('save-activity-btn');
+
+        const handleSaveActivity = async () => {
+            if (!currentClinicId || !newActivityContentInput.value.trim()) {
+                if (!newActivityContentInput.value.trim()) alert('내용을 입력해주세요.');
+                return;
+            }
+            const content = newActivityContentInput.value;
+            
+            // 1. Firestore Subcollection에 데이터 추가
+            await clinicsCollection.doc(currentClinicId).collection('activities').add({
+                content: content,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            alert('메모가 저장되었습니다.');
+
+            // 2. 입력창 비우기
+            newActivityContentInput.value = '';
+
+            // 3. 최신 활동 이력으로 목록 다시 불러오기
+            const activitiesSnapshot = await clinicsCollection.doc(currentClinicId).collection('activities')
+                                            .orderBy('createdAt', 'desc')
+                                            .get();
+            const activities = activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderActivityHistory(activities);
+        };
+        
+        if(saveActivityBtn) saveActivityBtn.addEventListener('click', handleSaveActivity);
+        if(newActivityContentInput) newActivityContentInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') handleSaveActivity();
         });
+
+
+        // ----- To-do List 관련 이벤트 리스너들 -----
         addTodoBtn.addEventListener('click', () => {
             if (document.querySelector('.todo-add-form')) return;
             const formItem = document.createElement('div');
@@ -450,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
             todoListContainer.prepend(formItem);
             document.getElementById('new-todo-content').focus();
         });
+
         todoListContainer.addEventListener('click', async (e) => {
             const target = e.target;
             const todoItem = target.closest('.todo-item');
@@ -487,6 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+        
         filterButtons.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 currentTodoFilter = e.target.dataset.filter;
