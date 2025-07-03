@@ -755,3 +755,36 @@ button.danger:hover {
 .delete-activity-btn:hover {
     background-color: #fff5f5;
 }
+/* ================== 토스트 알림(Toast) 스타일 ================== */
+#toast-notification {
+    position: fixed; /* 화면에 고정 */
+    bottom: -100px; /* 초기 위치는 화면 아래 */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px;
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 2000;
+    opacity: 0;
+    font-weight: 600;
+    transition: bottom 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    text-align: center;
+}
+
+/* 토스트가 나타날 때 적용될 스타일 */
+#toast-notification.show {
+    bottom: 30px; /* 최종 위치 */
+    opacity: 1;
+}
+
+/* 성공 메시지 스타일 */
+#toast-notification.success {
+    background-color: #28a745; /* 초록색 */
+}
+
+/* 에러 메시지 스타일 */
+#toast-notification.error {
+    background-color: #dc3545; /* 빨간색 */
+}
