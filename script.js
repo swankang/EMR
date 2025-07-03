@@ -464,40 +464,64 @@ function debounce(func, delay) {
         modal.addEventListener('click', (e) => { if (e.target === modal) e.target.classList.add('hidden'); });
         searchAddressBtn.addEventListener('click', execDaumPostcode);
 
-        clinicForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const clinicId = document.getElementById('clinic-id').value;
-            const fullAddress = `${document.getElementById('clinic-address').value}, ${document.getElementById('clinic-address-detail').value}`;
-            const clinicPayload = { name: document.getElementById('clinic-name').value, address: fullAddress, manager: document.getElementById('clinic-manager').value, contact: document.getElementById('clinic-contact').value, department: document.getElementById('clinic-department').value, scale: document.getElementById('clinic-scale').value, notes: document.getElementById('clinic-notes').value, stage: document.getElementById('clinic-stage').value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-            
-            if (clinicId) {
-                await clinicsCollection.doc(clinicId).update(clinicPayload);
-            } else {
-                const newDocRef = await clinicsCollection.add({ ...clinicPayload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                clinicPayload.id = newDocRef.id;
-            }
-            modal.classList.add('hidden');
-            allClinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            filterAndDisplay();
-            if(!detailView.classList.contains('hidden')) await showDetailView(clinicId);
-
-        try {
-         if (clinicId) {
-                await clinicsCollection.doc(clinicId).update(clinicPayload);
-             showToast('의원 정보가 성공적으로 수정되었습니다.', 'success'); // alert -> showToast
-           } else {
-            // ... (기존 로직 생략) ...
-            showToast('새 의원이 성공적으로 추가되었습니다.', 'success'); // alert -> showToast
+     clinicForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const clinicId = document.getElementById('clinic-id').value;
+    const fullAddress = `${document.getElementById('clinic-address').value}, ${document.getElementById('clinic-address-detail').value}`;
+    const clinicPayload = {
+        name: document.getElementById('clinic-name').value,
+        address: fullAddress,
+        manager: document.getElementById('clinic-manager').value,
+        contact: document.getElementById('clinic-contact').value,
+        department: document.getElementById('clinic-department').value,
+        scale: document.getElementById('clinic-scale').value,
+        notes: document.getElementById('clinic-notes').value,
+        stage: document.getElementById('clinic-stage').value,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // ▼▼▼ 알림 기능 및 에러 처리 추가 ▼▼▼
+    try {
+        if (clinicId) {
+            await clinicsCollection.doc(clinicId).update(clinicPayload);
+            showToast('의원 정보가 성공적으로 수정되었습니다.', 'success');
+        } else {
+            const newDocRef = await clinicsCollection.add({ ...clinicPayload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            clinicPayload.id = newDocRef.id; // 새 ID를 payload에 추가
+            showToast('새 의원이 성공적으로 등록되었습니다.', 'success');
         }
+        
         modal.classList.add('hidden');
-        // ... (이후 로직 생략) ...
+        allClinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        filterAndDisplay();
+        if(!detailView.classList.contains('hidden')) {
+            // 상세 보기 화면에서 수정했거나, 방금 추가한 경우 상세 보기 화면을 최신 정보로 갱신
+            await showDetailView(clinicId || clinicPayload.id);
+        }
     } catch (error) {
-        console.error("저장 오류:", error);
-        showToast('저장 중 오류가 발생했습니다.', 'error'); // alert -> showToast
+        console.error("의원 정보 저장 오류:", error);
+        showToast('처리 중 오류가 발생했습니다.', 'error');
     }
+});
 
 
-        });
+// 의원 정보 삭제 이벤트 리스너
+deleteClinicBtn.addEventListener('click', async () => {
+    if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까? 관련 활동 이력도 모두 삭제됩니다.')) return;
+    
+    // ▼▼▼ 알림 기능 및 에러 처리 추가 ▼▼▼
+    try {
+        await clinicsCollection.doc(currentClinicId).delete();
+        showToast('의원 정보가 삭제되었습니다.', 'success');
+        allClinics = allClinics.filter(c => c.id !== currentClinicId);
+        showListView();
+    } catch (error) {
+        console.error("의원 정보 삭제 오류:", error);
+        showToast('삭제 중 오류가 발생했습니다.', 'error');
+    }
+});
+
+
 
         backToListBtn.addEventListener('click', showListView);
 
@@ -533,52 +557,79 @@ function debounce(func, delay) {
         const newActivityContentInput = document.getElementById('new-activity-content');
         const saveActivityBtn = document.getElementById('save-activity-btn');
 
-        const handleSaveActivity = async () => {
-            const content = newActivityContentInput.value.trim();
-            if (!currentClinicId || !content) {
-                if (!content) showToast('내용을 입력해주세요.', 'error');
-                return;
-            }
-            
-            newActivityContentInput.disabled = true;
-            saveActivityBtn.disabled = true;
-
-            try {
-                // 1. Firestore에 데이터 추가하고 새 문서의 참조를 받아옴
-                const newActivityRef = await clinicsCollection.doc(currentClinicId).collection('activities').add({
-                    content: content,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+       const handleSaveActivity = async () => {
+    const content = newActivityContentInput.value.trim();
+    if (!currentClinicId || !content) {
+        if (!content) showToast('내용을 입력해주세요.', 'error');
+        return;
+    }
     
-                // 2. 화면에 바로 아이템 추가 (전체 목록 다시 안불러옴)
-                const noHistoryMsg = activityHistoryList.querySelector('.no-history');
-                if (noHistoryMsg) noHistoryMsg.remove(); // "이력 없음" 메시지 제거
+    newActivityContentInput.disabled = true;
+    saveActivityBtn.disabled = true;
 
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                item.dataset.id = newActivityRef.id; // DB에서 생성된 ID 사용
+    try {
+        const newActivityRef = await clinicsCollection.doc(currentClinicId).collection('activities').add({
+            content: content,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        const noHistoryMsg = activityHistoryList.querySelector('.no-history');
+        if (noHistoryMsg) noHistoryMsg.remove();
+
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.dataset.id = newActivityRef.id;
+        item.innerHTML = `
+            <span class="history-content">${content}</span>
+            <div class="history-meta">
+                 <span class="history-date">${new Date().toISOString().split('T')[0]}</span>
+                 <button class="delete-activity-btn">삭제</button>
+            </div>
+        `;
+        activityHistoryList.prepend(item);
+        newActivityContentInput.value = '';
         
-                item.innerHTML = `
-                    <span class="history-content">${content}</span>
-                    <div class="history-meta">
-                         <span class="history-date">${new Date().toISOString().split('T')[0]}</span>
-                         <button class="delete-activity-btn">삭제</button>
-                    </div>
-                `;
-                activityHistoryList.prepend(item); // prepend로 맨 위에 추가
+        // ▼▼▼ 활동 이력 추가 성공 알림 ▼▼▼
+        showToast('새로운 활동 이력이 추가되었습니다.', 'success');
 
-                // 3. 입력창 비우기
-                newActivityContentInput.value = '';
+    } catch(error) {
+        console.error("활동 이력 저장 오류:", error);
+        // ▼▼▼ 기존 alert을 toast로 변경 ▼▼▼
+        showToast('저장 중 오류가 발생했습니다.', 'error');
+    } finally {
+        newActivityContentInput.disabled = false;
+        saveActivityBtn.disabled = false;
+        newActivityContentInput.focus();
+    }
+};
 
-            } catch(error) {
-                console.error("활동 이력 저장 오류:", error);
-                alert("저장 중 오류가 발생했습니다.");
-            } finally {
-                newActivityContentInput.disabled = false;
-                saveActivityBtn.disabled = false;
-                newActivityContentInput.focus();
+// 활동 이력 삭제 로직
+if (activityHistoryList) {
+    activityHistoryList.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('delete-activity-btn')) {
+            const itemToDelete = e.target.closest('.history-item');
+            const activityId = itemToDelete.dataset.id;
+            
+            if (confirm('정말 이 이력을 삭제하시겠습니까?')) {
+                try {
+                    await clinicsCollection.doc(currentClinicId).collection('activities').doc(activityId).delete();
+                    itemToDelete.remove();
+
+                    // ▼▼▼ 활동 이력 삭제 성공 알림 ▼▼▼
+                    showToast('활동 이력이 삭제되었습니다.', 'success');
+
+                    if (activityHistoryList.children.length === 0) {
+                        activityHistoryList.innerHTML = '<p class="no-history">아직 등록된 활동 이력이 없습니다.</p>';
+                    }
+                } catch (error) {
+                    console.error("활동 이력 삭제 오류:", error);
+                    // ▼▼▼ 기존 alert을 toast로 변경 ▼▼▼
+                    showToast('삭제 중 오류가 발생했습니다.', 'error');
+                }
             }
-        };
+        }
+    });
+}
         
         if(saveActivityBtn) saveActivityBtn.addEventListener('click', handleSaveActivity);
         if(newActivityContentInput) newActivityContentInput.addEventListener('keyup', (e) => {
