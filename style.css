@@ -303,9 +303,7 @@ button.danger:hover {
 }
 
 .modal {
-/* ⭐===== 토스트 알림 스타일 (신규 추가) =====⭐ */
-#toast-notification {
-position: fixed;
+    position: fixed;
     z-index: 1000;
     left: 0;
     top: 0;
@@ -409,12 +407,7 @@ position: fixed;
 
 #todo-filter-buttons button.active {
     background-color: var(--primary-color);
-    bottom: -100px; /* 초기 위치는 화면 아래 */
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 25px;
-    background-color: rgba(0, 0, 0, 0.75);
-color: #fff;
+    color: #fff;
     border-color: var(--primary-color);
 }
 
@@ -458,20 +451,12 @@ color: #fff;
 .todo-actions {
     width: 100px;
     text-align: right;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    z-index: 2000;
-opacity: 0;
+    opacity: 0;
     transition: opacity .2s;
-    font-weight: 600;
-    transition: bottom 0.5s ease-in-out, opacity 0.5s ease-in-out;
-    text-align: center;
 }
 
 .todo-item:hover .todo-actions {
-#toast-notification.show {
-    bottom: 30px; /* 최종 위치 */
-opacity: 1;
+    opacity: 1;
 }
 
 .todo-actions button {
@@ -651,4 +636,96 @@ opacity: 1;
     max-height: none;
     overflow-y: visible;
     padding-right: 0;
+}
+
+/* ⭐===== 토스트 알림 스타일 (신규 추가) =====⭐ */
+#toast-notification {
+    position: fixed;
+    bottom: -100px; /* 초기 위치는 화면 아래 */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px;
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 2000;
+    opacity: 0;
+    font-weight: 600;
+    transition: bottom 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    text-align: center;
+}
+
+#toast-notification.show {
+    bottom: 30px; /* 최종 위치 */
+    opacity: 1;
+}
+
+
+/* ================== 활동 이력(Activity History) 스타일 ================== */
+
+/* 입력 폼 전체를 감싸는 영역 */
+.activity-input-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+/* 활동 내용 입력창 */
+#new-activity-content {
+    flex-grow: 1; /* 남는 공간을 모두 차지 */
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+}
+
+/* 이력 추가 버튼 */
+#save-activity-btn {
+    flex-shrink: 0; /* 버튼 크기 고정 */
+}
+
+/* 이력 목록 전체를 감싸는 컨테이너 */
+.history-list-container {
+    border: 1px solid #eee;
+    border-radius: 5px;
+    max-height: 400px; /* 너무 길어지면 스크롤 생성 */
+    overflow-y: auto;
+    background-color: #fdfdfd;
+}
+
+/* 개별 이력 아이템 */
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 15px;
+}
+
+/* 마지막 아이템의 아래 테두리는 제거 */
+.history-item:last-child {
+    border-bottom: none;
+}
+
+/* 이력 내용 */
+.history-content {
+    flex-grow: 1;
+    padding-right: 15px;
+    color: #333;
+}
+
+/* 날짜 */
+.history-date {
+    flex-shrink: 0;
+    color: #888;
+    font-size: 13px;
+}
+
+/* 이력이 없을 때 표시되는 메시지 */
+.no-history {
+    text-align: center;
+    color: #888;
+    padding: 40px 0;
 }
