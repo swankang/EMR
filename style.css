@@ -729,3 +729,29 @@ button.danger:hover {
     color: #888;
     padding: 40px 0;
 }
+
+/* ================== 활동 이력 삭제 버튼 스타일 ================== */
+.history-item {
+    align-items: center; /* 세로 중앙 정렬을 위해 추가 */
+}
+
+.delete-activity-btn {
+    background: none;
+    border: 1px solid #ffdddd;
+    color: var(--danger-color);
+    padding: 3px 8px;
+    font-size: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 15px;
+    opacity: 0.5; /* 평소엔 반투명 */
+    transition: opacity 0.2s;
+}
+
+.history-item:hover .delete-activity-btn {
+    opacity: 1; /* 마우스 올리면 선명하게 */
+}
+
+.delete-activity-btn:hover {
+    background-color: #fff5f5;
+}

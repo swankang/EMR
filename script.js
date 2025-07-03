@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalTodoCountSpan = document.getElementById('total-todo-count');
         const filterButtons = document.getElementById('todo-filter-buttons');
         const addTodoBtn = document.getElementById('add-todo-btn');
+        const activityHistoryList = document.getElementById('activity-history-list'); // 삭제 리스너를 위해 추가
 
         // --- 전역 변수 ---
         let allClinics = [];
@@ -347,45 +348,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // ✨ ----- 활동 이력 렌더링 함수 (신규 추가) ----- ✨
+        // ✨ ----- 활동 이력 렌더링 함수 (삭제 버튼 추가) ----- ✨
         function renderActivityHistory(activities) {
-            const historyListContainer = document.getElementById('activity-history-list');
-            if (!historyListContainer) return;
-        
-            historyListContainer.innerHTML = ''; // 기존 목록 초기화
+            if (!activityHistoryList) return;
+            activityHistoryList.innerHTML = ''; // 기존 목록 초기화
         
             if (activities.length === 0) {
-                historyListContainer.innerHTML = '<p class="no-history" style="text-align:center; color:#888; padding: 20px 0;">아직 등록된 활동 이력이 없습니다.</p>';
+                activityHistoryList.innerHTML = '<p class="no-history">아직 등록된 활동 이력이 없습니다.</p>';
                 return;
             }
         
             activities.forEach(activity => {
                 const item = document.createElement('div');
-                // CSS를 위한 클래스 추가 (style.css에서 꾸밀 수 있음)
-                item.className = 'history-item'; 
-                item.style.display = 'flex';
-                item.style.justifyContent = 'space-between';
-                item.style.padding = '10px';
-                item.style.borderBottom = '1px solid #eee';
-
-                const content = document.createElement('span');
-                content.className = 'history-content';
-                content.textContent = activity.content;
+                item.className = 'history-item';
+                item.dataset.id = activity.id; // 삭제를 위해 문서 ID 저장
         
-                const date = document.createElement('span');
-                date.className = 'history-date';
-                date.style.color = '#888';
-                date.style.fontSize = '14px';
-                // Firestore Timestamp를 'YYYY-MM-DD' 형식의 날짜 문자열로 변환
-                date.textContent = new Date(activity.createdAt.toDate()).toISOString().split('T')[0];
-                
-                item.appendChild(content);
-                item.appendChild(date);
-                historyListContainer.appendChild(item);
+                item.innerHTML = `
+                    <span class="history-content">${activity.content}</span>
+                    <div class="history-meta">
+                        <span class="history-date">${new Date(activity.createdAt.toDate()).toISOString().split('T')[0]}</span>
+                        <button class="delete-activity-btn">삭제</button>
+                    </div>
+                `;
+                activityHistoryList.appendChild(item);
             });
         }
 
-        // ✨ ----- 상세 보기 함수 수정 ----- ✨
         async function showDetailView(id) {
             const doc = await clinicsCollection.doc(id).get();
             if (!doc.exists) return;
@@ -402,16 +390,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('detail-notes').textContent = clinic.notes || '-';
             document.getElementById('detail-updated').textContent = (clinic.updatedAt && clinic.updatedAt.toDate) ? new Date(clinic.updatedAt.toDate()).toLocaleString() : '정보 없음';
             
-            // ⛔️ 기존 메모 관련 코드 삭제됨
-
-            // ✨ 활동 이력(activities) 데이터 가져오기 (수정/추가된 부분) ✨
             const activitiesSnapshot = await clinicsCollection.doc(id).collection('activities')
-                                            .orderBy('createdAt', 'desc') // 최신순으로 정렬
+                                            .orderBy('createdAt', 'desc')
                                             .get();
-            
             const activities = activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            // ✨ 가져온 활동 이력을 화면에 렌더링 ✨
             renderActivityHistory(activities);
             
             listView.classList.add('hidden');
@@ -452,7 +434,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clinicId) {
                 await clinicsCollection.doc(clinicId).update(clinicPayload);
             } else {
-                // 새 의원 추가 시에는 memo 필드를 넣지 않음
                 const newDocRef = await clinicsCollection.add({ ...clinicPayload, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                 clinicPayload.id = newDocRef.id;
             }
@@ -487,46 +468,95 @@ document.addEventListener('DOMContentLoaded', () => {
 
         deleteClinicBtn.addEventListener('click', async () => {
             if (!currentClinicId || !confirm('정말 이 의원 정보를 삭제하시겠습니까? 관련 활동 이력도 모두 삭제됩니다.')) return;
-            // TODO: 서브컬렉션의 문서를 삭제하는 로직은 복잡하므로 일단 보류 (혹은 Cloud Function 사용)
             await clinicsCollection.doc(currentClinicId).delete();
             allClinics = allClinics.filter(c => c.id !== currentClinicId);
             showListView();
         });
 
-        // ⛔️ 기존 메모 저장 버튼 이벤트 리스너 삭제됨
-
-        // ✨ ----- 새로운 활동 이력 저장 로직 (신규 추가) ----- ✨
+        // ✨ ----- 새로운 활동 이력 저장 로직 (중복 등록 문제 해결) ----- ✨
         const newActivityContentInput = document.getElementById('new-activity-content');
         const saveActivityBtn = document.getElementById('save-activity-btn');
 
         const handleSaveActivity = async () => {
-            if (!currentClinicId || !newActivityContentInput.value.trim()) {
-                if (!newActivityContentInput.value.trim()) alert('내용을 입력해주세요.');
+            const content = newActivityContentInput.value.trim();
+            if (!currentClinicId || !content) {
+                if (!content) alert('내용을 입력해주세요.');
                 return;
             }
-            const content = newActivityContentInput.value;
             
-            // 1. Firestore Subcollection에 데이터 추가
-            await clinicsCollection.doc(currentClinicId).collection('activities').add({
-                content: content,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            newActivityContentInput.disabled = true;
+            saveActivityBtn.disabled = true;
 
-            // 2. 입력창 비우기
-            newActivityContentInput.value = '';
+            try {
+                // 1. Firestore에 데이터 추가하고 새 문서의 참조를 받아옴
+                const newActivityRef = await clinicsCollection.doc(currentClinicId).collection('activities').add({
+                    content: content,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+    
+                // 2. 화면에 바로 아이템 추가 (전체 목록 다시 안불러옴)
+                const noHistoryMsg = activityHistoryList.querySelector('.no-history');
+                if (noHistoryMsg) noHistoryMsg.remove(); // "이력 없음" 메시지 제거
 
-            // 3. 최신 활동 이력으로 목록 다시 불러오기
-            const activitiesSnapshot = await clinicsCollection.doc(currentClinicId).collection('activities')
-                                            .orderBy('createdAt', 'desc')
-                                            .get();
-            const activities = activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderActivityHistory(activities);
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.dataset.id = newActivityRef.id; // DB에서 생성된 ID 사용
+        
+                item.innerHTML = `
+                    <span class="history-content">${content}</span>
+                    <div class="history-meta">
+                         <span class="history-date">${new Date().toISOString().split('T')[0]}</span>
+                         <button class="delete-activity-btn">삭제</button>
+                    </div>
+                `;
+                activityHistoryList.prepend(item); // prepend로 맨 위에 추가
+
+                // 3. 입력창 비우기
+                newActivityContentInput.value = '';
+
+            } catch(error) {
+                console.error("활동 이력 저장 오류:", error);
+                alert("저장 중 오류가 발생했습니다.");
+            } finally {
+                newActivityContentInput.disabled = false;
+                saveActivityBtn.disabled = false;
+                newActivityContentInput.focus();
+            }
         };
         
         if(saveActivityBtn) saveActivityBtn.addEventListener('click', handleSaveActivity);
         if(newActivityContentInput) newActivityContentInput.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') handleSaveActivity();
         });
+
+        // ✨ ----- 활동 이력 삭제 로직 (신규 추가) ----- ✨
+        if (activityHistoryList) {
+            activityHistoryList.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('delete-activity-btn')) {
+                    const itemToDelete = e.target.closest('.history-item');
+                    const activityId = itemToDelete.dataset.id;
+                    
+                    if (confirm('정말 이 이력을 삭제하시겠습니까?')) {
+                        try {
+                            // 1. Firestore에서 데이터 삭제
+                            await clinicsCollection.doc(currentClinicId).collection('activities').doc(activityId).delete();
+                            
+                            // 2. 화면에서 해당 아이템 삭제
+                            itemToDelete.remove();
+
+                            // 3. 만약 목록이 비었으면 "이력 없음" 메시지 표시
+                            if (activityHistoryList.children.length === 0) {
+                                activityHistoryList.innerHTML = '<p class="no-history">아직 등록된 활동 이력이 없습니다.</p>';
+                            }
+
+                        } catch (error) {
+                            console.error("활동 이력 삭제 오류:", error);
+                            alert("삭제 중 오류가 발생했습니다.");
+                        }
+                    }
+                }
+            });
+        }
 
 
         // ----- To-do List 관련 이벤트 리스너들 -----
