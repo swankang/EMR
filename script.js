@@ -100,7 +100,7 @@ function showToast(message, type = 'success') { // type: 'success' 또는 'error
         
         searchStageSelect.addEventListener('change', filterAndDisplay);
         searchDepartmentSelect.addEventListener('change', filterAndDisplay);
-        searchNameInput.addEventListener('input', handleAutocomplete);
+        searchNameInput.addEventListener('input', debounce(handleAutocomplete, 300));
         
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-input-wrapper')) {
@@ -111,6 +111,22 @@ function showToast(message, type = 'success') { // type: 'success' 또는 'error
         // ===============================================================
         //   ▼▼▼ 모든 함수 정의 (Function Definitions) ▼▼▼
         // ===============================================================
+
+
+
+function debounce(func, delay) {
+      let timeoutId;
+      return function(...args) {
+        // 이전에 설정된 타이머가 있다면 취소 (타이핑이 계속되면 이전 타이머는 무시)
+        clearTimeout(timeoutId);
+        // delay 밀리초 후에 원래 함수(func)를 실행하도록 새 타이머 설정
+        timeoutId = setTimeout(() => {
+          func.apply(this, args);
+        }, delay);
+      };
+    }
+
+
 
         function loadNaverMapsApi() {
             return new Promise((resolve, reject) => {
@@ -370,6 +386,7 @@ function showToast(message, type = 'success') { // type: 'success' 또는 'error
             }
         }
 
+        
         // ✨ ----- 활동 이력 렌더링 함수 (삭제 버튼 추가) ----- ✨
         function renderActivityHistory(activities) {
             if (!activityHistoryList) return;
