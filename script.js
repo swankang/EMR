@@ -9,22 +9,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let appInitialized = false;
 
 // 토스트 알림을 보여주는 공통 함수
-function showToast(message, type = 'success') {
+function showToast(message, type = 'success') { // type: 'success' 또는 'error'
     const toast = document.getElementById('toast-notification');
     if (!toast) return;
 
+    // 1. 메시지 설정
     toast.textContent = message;
-    // className을 id 이름으로 초기화하여 CSS가 올바르게 적용되도록 수정
-    toast.className = 'toast-notification'; 
+
+    // 2. 이전에 설정된 색상 클래스(success, error)를 먼저 제거
+    //    이렇게 해야 색상이 중복 적용되지 않아.
+    toast.classList.remove('success', 'error');
+    
+    // 3. 애니메이션을 위한 'show' 클래스와,
+    //    전달받은 타입(type)에 맞는 색상 클래스를 추가
     toast.classList.add('show', type);
 
-    // 3초 후에 자동으로 사라지도록 설정
+    // 4. 3초 후에 'show' 클래스를 제거해서 토스트를 사라지게 함
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
 }
-
-
 
     auth.onAuthStateChanged(user => {
         if (user) {
@@ -459,6 +463,23 @@ function showToast(message, type = 'success') {
             allClinics = (await clinicsCollection.orderBy('updatedAt', 'desc').get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
             filterAndDisplay();
             if(!detailView.classList.contains('hidden')) await showDetailView(clinicId);
+
+        try {
+         if (clinicId) {
+                await clinicsCollection.doc(clinicId).update(clinicPayload);
+             showToast('의원 정보가 성공적으로 수정되었습니다.', 'success'); // alert -> showToast
+           } else {
+            // ... (기존 로직 생략) ...
+            showToast('새 의원이 성공적으로 추가되었습니다.', 'success'); // alert -> showToast
+        }
+        modal.classList.add('hidden');
+        // ... (이후 로직 생략) ...
+    } catch (error) {
+        console.error("저장 오류:", error);
+        showToast('저장 중 오류가 발생했습니다.', 'error'); // alert -> showToast
+    }
+
+
         });
 
         backToListBtn.addEventListener('click', showListView);
