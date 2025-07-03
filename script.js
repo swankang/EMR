@@ -9,13 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let appInitialized = false;
 
 // 토스트 알림을 보여주는 공통 함수
-function showToast(message, type = 'success') { // type 기본값은 'success'
+function showToast(message, type = 'success') {
     const toast = document.getElementById('toast-notification');
     if (!toast) return;
 
     toast.textContent = message;
-    toast.className = ''; // 기존 클래스 초기화
-    toast.classList.add('show', type); // type에 따라 success 또는 error 클래스 추가
+    // className을 id 이름으로 초기화하여 CSS가 올바르게 적용되도록 수정
+    toast.className = 'toast-notification'; 
+    toast.classList.add('show', type);
 
     // 3초 후에 자동으로 사라지도록 설정
     setTimeout(() => {
