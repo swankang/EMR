@@ -47,14 +47,16 @@
                     <input type="text" id="search-name" placeholder="의원명으로 검색..." autocomplete="off">
                     <div id="autocomplete-results" class="hidden"></div>
                 </div>
+                <!-- [추가] 검색 초기화 버튼 -->
+                <button id="reset-search-btn" class="secondary">초기화</button>
             </section>
-            
+
             <section id="stats-section">
                 <div class="stat-card"><h3>진료과별 분포</h3><div class="chart-container"><canvas id="department-chart"></canvas></div></div>
                 <div class="stat-card"><h3>규모별 분포</h3><div class="chart-container"><canvas id="scale-chart"></canvas></div></div>
                 <div class="stat-card"><h3>홍보 단계별 현황</h3><div class="chart-container"><canvas id="stage-chart"></canvas></div></div>
             </section>
-            
+
             <main id="dashboard-view"></main>
 
             <section id="todo-section">
@@ -73,7 +75,9 @@
                 <div id="todo-pagination" class="pagination-container"></div>
             </section>
         </div>
+
         <div id="toast-notification"></div>
+
         <div id="detail-view" class="hidden">
             <header>
                 <button id="back-to-list-btn">← 목록으로</button>
@@ -101,17 +105,17 @@
                         <div id="map"></div>
                     </div>
                 </div>
-             <div class="memo-section"> <h2>활동 이력</h2>
-                     <div class="activity-input-form">
-                           <input type="text" id="new-activity-content" placeholder="새로운 활동 내용 입력 후 Enter 또는 버튼 클릭">
-                           <button id="save-activity-btn">이력 추가</button>
-            </div>
-    <div id="activity-history-list" class="history-list-container">
-        </div>
-</div>
+                <div class="memo-section">
+                    <h2>활동 이력</h2>
+                    <div class="activity-input-form">
+                        <input type="text" id="new-activity-content" placeholder="새로운 활동 내용 입력 후 Enter 또는 버튼 클릭">
+                        <button id="save-activity-btn">이력 추가</button>
+                    </div>
+                    <div id="activity-history-list" class="history-list-container"></div>
+                </div>
             </main>
         </div>
-    
+
         <div id="clinic-modal" class="modal hidden">
             <div class="modal-content">
                 <span class="close-btn">&times;</span>
@@ -155,7 +159,7 @@
             </div>
         </div>
     </div>
-    
+
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
